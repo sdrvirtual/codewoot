@@ -7,15 +7,22 @@ type ChatwootWebhook struct {
 	ContentType          string         `json:"content_type"`
 	Content              string         `json:"content"`
 	Conversation         CWConversation `json:"conversation"`
-	CreatedAt            string         `json:"created_at"`
+	CreatedAt            any            `json:"created_at"`
 	ID                   int            `json:"id"`
 	Inbox                CWInbox        `json:"inbox"`
-	MessageType          string         `json:"message_type"`
+	MessageType          CWMessageType  `json:"message_type"`
 	Private              bool           `json:"private"`
 	Sender               CWSimpleSender `json:"sender"`
 	SourceID             *string        `json:"source_id"`
 	Event                string         `json:"event"`
 }
+
+type CWMessageType string
+
+const (
+	Outgoing CWMessageType = "outgoing"
+	Incoming CWMessageType = "incoming"
+)
 
 type CWAccount struct {
 	ID   int    `json:"id"`
@@ -52,7 +59,7 @@ type CWConversation struct {
 	CustomAttributes     map[string]any        `json:"custom_attributes"`
 	SnoozedUntil         any                   `json:"snoozed_until"`
 	UnreadCount          int                   `json:"unread_count"`
-	FirstReplyCreatedAt  string                `json:"first_reply_created_at"`
+	FirstReplyCreatedAt  any                   `json:"first_reply_created_at"`
 	Priority             any                   `json:"priority"`
 	WaitingSince         float64               `json:"waiting_since"`
 	AgentLastSeenAt      float64               `json:"agent_last_seen_at"`

@@ -17,7 +17,7 @@ func (c *Client) SendText(ctx context.Context, payload any) (json.RawMessage, er
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
+	return c.doJSON(req)
 }
 
 func (c *Client) SendMedia(ctx context.Context, instanceName string, payload any) (json.RawMessage, error) {
@@ -29,7 +29,7 @@ func (c *Client) SendMedia(ctx context.Context, instanceName string, payload any
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
+	return c.doJSON(req)
 }
 
 func (c *Client) SendMediaFile(ctx context.Context, instanceName string, payload any) (json.RawMessage, error) {
@@ -41,7 +41,7 @@ func (c *Client) SendMediaFile(ctx context.Context, instanceName string, payload
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
+	return c.doJSON(req)
 }
 
 func (c *Client) SendLocation(ctx context.Context, instanceName string, payload any) (json.RawMessage, error) {
@@ -53,7 +53,7 @@ func (c *Client) SendLocation(ctx context.Context, instanceName string, payload 
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
+	return c.doJSON(req)
 }
 
 func (c *Client) SendContact(ctx context.Context, instanceName string, payload any) (json.RawMessage, error) {
@@ -65,7 +65,7 @@ func (c *Client) SendContact(ctx context.Context, instanceName string, payload a
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
+	return c.doJSON(req)
 }
 
 func (c *Client) SendReaction(ctx context.Context, instanceName string, payload any) (json.RawMessage, error) {
@@ -77,7 +77,7 @@ func (c *Client) SendReaction(ctx context.Context, instanceName string, payload 
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
+	return c.doJSON(req)
 }
 
 func (c *Client) SendWhatsAppAudio(ctx context.Context, instanceName string, payload any) (json.RawMessage, error) {
@@ -89,7 +89,7 @@ func (c *Client) SendWhatsAppAudio(ctx context.Context, instanceName string, pay
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
+	return c.doJSON(req)
 }
 
 func (c *Client) SendWhatsAppAudioFile(ctx context.Context, instanceName string, payload any) (json.RawMessage, error) {
@@ -101,7 +101,7 @@ func (c *Client) SendWhatsAppAudioFile(ctx context.Context, instanceName string,
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
+	return c.doJSON(req)
 }
 
 func (c *Client) SendButtons(ctx context.Context, instanceName string, payload any) (json.RawMessage, error) {
@@ -113,7 +113,7 @@ func (c *Client) SendButtons(ctx context.Context, instanceName string, payload a
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
+	return c.doJSON(req)
 }
 
 func (c *Client) SendList(ctx context.Context, instanceName string, payload any) (json.RawMessage, error) {
@@ -125,5 +125,5 @@ func (c *Client) SendList(ctx context.Context, instanceName string, payload any)
 	if err != nil {
 		return nil, err
 	}
-	return c.do(req)
+	return c.doJSON(req)
 }

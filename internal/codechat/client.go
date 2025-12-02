@@ -81,21 +81,27 @@ func (c *Client) newRequest(ctx context.Context, method, p string, body any) (*h
 	u.Path = path.Join(c.baseURL.Path, p)
 
 	var rdr io.Reader
+	setJSON := false
 	if body != nil {
-		buf := &bytes.Buffer{}
-		enc := json.NewEncoder(buf)
-		enc.SetEscapeHTML(false)
-		if err := enc.Encode(body); err != nil {
-			return nil, fmt.Errorf("encode body: %w", err)
+		if r, ok := body.(io.Reader); ok {
+			rdr = r
+		} else {
+			buf := &bytes.Buffer{}
+			enc := json.NewEncoder(buf)
+			enc.SetEscapeHTML(false)
+			if err := enc.Encode(body); err != nil {
+				return nil, fmt.Errorf("encode body: %w", err)
+			}
+			rdr = buf
+			setJSON = true
 		}
-		rdr = buf
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), rdr)
 	if err != nil {
 		return nil, err
 	}
-	if body != nil {
+	if setJSON {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("apikey", c.globalToken)
@@ -105,7 +111,7 @@ func (c *Client) newRequest(ctx context.Context, method, p string, body any) (*h
 	return req, nil
 }
 
-func (c *Client) do(req *http.Request) (json.RawMessage, error) {
+func (c *Client) doJSON(req *http.Request) (json.RawMessage, error) {
 	if c.logf != nil {
 		c.logf("%s %s", req.Method, req.URL.String())
 	}
@@ -125,4 +131,22 @@ func (c *Client) do(req *http.Request) (json.RawMessage, error) {
 	}
 
 	return json.RawMessage(b), nil
+}
+
+
+func (c *Client) do(req *http.Request) (*http.Response, error) {
+	if c.logf != nil {
+		c.logf("%s %s", req.Method, req.URL.String())
+	}
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		b, _ := io.ReadAll(res.Body)
+		return nil, &APIError{StatusCode: res.StatusCode, Body: string(b)}
+	}
+
+	return res, nil
 }
