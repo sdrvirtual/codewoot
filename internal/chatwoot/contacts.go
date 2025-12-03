@@ -10,7 +10,7 @@ import (
 )
 
 func (c *Client) GetContactByPhone(ctx context.Context, phoneNumber string) (*dto.CWContact, error) {
-	p := fmt.Sprintf("/api/v1/accounts/%d/contacts/search", c.accountId)
+	p := fmt.Sprintf("/api/v1/accounts/%d/contacts/search", c.accountID)
 
 	req, err := c.newRequest(ctx, http.MethodGet, p, nil)
 
@@ -43,7 +43,7 @@ func (c *Client) CreateContact(ctx context.Context, params CreateContactParams) 
 	if params.InboxID <= 0 {
 		return nil, fmt.Errorf("inbox_id is required")
 	}
-	p := fmt.Sprintf("/api/v1/accounts/%d/contacts", c.accountId)
+	p := fmt.Sprintf("/api/v1/accounts/%d/contacts", c.accountID)
 	req, err := c.newRequest(ctx, http.MethodPost, p, params)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (c *Client) CreateContact(ctx context.Context, params CreateContactParams) 
 }
 
 func (c *Client) CreateContactInbox(ctx context.Context, contactID int, params CreateContactInboxParams) (*dto.CWContactInbox, error) {
-	p := fmt.Sprintf("/api/v1/accounts/%d/contacts/%d/contact_inboxes", c.accountId, contactID)
+	p := fmt.Sprintf("/api/v1/accounts/%d/contacts/%d/contact_inboxes", c.accountID, contactID)
 	req, err := c.newRequest(ctx, http.MethodPost, p, params)
 	if err != nil {
 		return nil, err

@@ -28,7 +28,7 @@ type ConversationRef struct {
 }
 
 func (c *Client) GetContactConversations(ctx context.Context, contactID int) ([]dto.CWConversation, error) {
-	p := fmt.Sprintf("/api/v1/accounts/%d/contacts/%d/conversations", c.accountId, contactID)
+	p := fmt.Sprintf("/api/v1/accounts/%d/contacts/%d/conversations", c.accountID, contactID)
 	req, err := c.newRequest(ctx, http.MethodGet, p, nil)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (c *Client) CreateConversation(ctx context.Context, sourceID string, inboxI
 		"source_id": sourceID,
 		"inbox_id":  inboxID,
 	}
-	p := fmt.Sprintf("/api/v1/accounts/%d/conversations", c.accountId)
+	p := fmt.Sprintf("/api/v1/accounts/%d/conversations", c.accountID)
 	req, err := c.newRequest(ctx, http.MethodPost, p, body)
 	if err != nil {
 		return 0, err

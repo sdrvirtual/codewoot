@@ -13,6 +13,15 @@ import (
 	"time"
 )
 
+type Client struct {
+	baseURL    *url.URL
+	token      string
+	accountID  int
+	httpClient *http.Client
+
+	logf func(format string, args ...any)
+}
+
 type Option func(*Client)
 
 func WithHTTPClient(hc *http.Client) Option {
@@ -29,20 +38,11 @@ func WithLogger(logf func(format string, args ...any)) Option {
 	}
 }
 
-type Client struct {
-	baseURL    *url.URL
-	token      string
-	accountId  int
-	httpClient *http.Client
-
-	logf func(format string, args ...any)
-}
-
-func New(baseUrl, token string, accountId int, opts ...Option) (*Client, error) {
-	if baseUrl == "" {
+func New(baseURL, token string, accountID int, opts ...Option) (*Client, error) {
+	if baseURL == "" {
 		return nil, fmt.Errorf("base URL is required")
 	}
-	u, err := url.Parse(baseUrl)
+	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid base URL: %w", err)
 	}
@@ -51,7 +51,7 @@ func New(baseUrl, token string, accountId int, opts ...Option) (*Client, error) 
 	c := &Client{
 		baseURL:    u,
 		token:      token,
-		accountId:  accountId,
+		accountID:  accountID,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
 	for _, opt := range opts {
@@ -95,9 +95,6 @@ func (c *Client) newRequest(ctx context.Context, method, p string, body any) (*h
 }
 
 func (c *Client) do(req *http.Request) (json.RawMessage, error) {
-
-	println(req.URL.String())
-
 	if c.logf != nil {
 		c.logf("%s %s", req.Method, req.URL.String())
 	}

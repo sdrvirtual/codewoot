@@ -30,7 +30,7 @@ func NewChatwootClientMessage() ChatwootClientMessage {
 }
 
 func (c *Client) CreateMessage(ctx context.Context, message ChatwootClientMessage) (*dto.CWMessage, error) {
-	p := fmt.Sprintf("/api/v1/accounts/%d/conversations/%d/messages", c.accountId, message.ConversationID)
+	p := fmt.Sprintf("/api/v1/accounts/%d/conversations/%d/messages", c.accountID, message.ConversationID)
 
 	// params := message.toAPIMessage()
 	var buf bytes.Buffer
