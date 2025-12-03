@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/textproto"
 
 	"github.com/sdrvirtual/codewoot/internal/dto"
 )
@@ -16,13 +17,14 @@ type ChatwootClientMessage struct {
 	Text           string
 	ConversationID int
 	MessageType    dto.CWMessageType
+	FileType       string
 	Private        bool
 	Attachment     *dto.FileData
 }
 
 func NewChatwootClientMessage() ChatwootClientMessage {
 	return ChatwootClientMessage{
-		Private: false,
+		Private:     false,
 		MessageType: dto.Incoming,
 	}
 }
@@ -55,8 +57,23 @@ func (c *Client) CreateMessage(ctx context.Context, message ChatwootClientMessag
 			return nil, err
 		}
 	}
+	if message.FileType != "" {
+		fw, err := mw.CreateFormField("file_type")
+		if err != nil {
+			return nil, err
+		}
+		_, err = fw.Write([]byte(message.FileType))
+		if err != nil {
+			return nil, err
+		}
+	}
 	if message.Attachment != nil {
-		fw, err := mw.CreateFormFile("attachments[]", message.Attachment.Name)
+		h := make(textproto.MIMEHeader)
+		h.Set("Content-Disposition",
+			fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
+				"attachments[]", message.Attachment.Name))
+		h.Set("Content-Type", message.Attachment.Mimetype)
+		fw, err := mw.CreatePart(h)
 		if err != nil {
 			return nil, err
 		}
@@ -71,6 +88,8 @@ func (c *Client) CreateMessage(ctx context.Context, message ChatwootClientMessag
 	req, err := c.newRequest(ctx, http.MethodPost, p, io.Reader(&buf))
 
 	req.Header.Set("Content-Type", mw.FormDataContentType())
+	// u, _ := url.Parse("https://webhook.site/b1e4dbe9-93f1-4495-863f-07cd4f0eb412")
+	// req.URL = u
 
 	if err != nil {
 		return nil, err
@@ -79,6 +98,8 @@ func (c *Client) CreateMessage(ctx context.Context, message ChatwootClientMessag
 	if err != nil {
 		return nil, err
 	}
+	s, _ := json.MarshalIndent(raw, "", "  ")
+	fmt.Println(string(s))
 	var out dto.CWMessage
 	if err := json.Unmarshal(raw, &out); err != nil {
 		return nil, fmt.Errorf("create message: %w", err)

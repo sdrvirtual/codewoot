@@ -2,10 +2,10 @@ package services
 
 import (
 	"context"
-	"io"
 	"log"
-	"os"
+	"strings"
 
+	"github.com/sdrvirtual/codewoot/internal/audio"
 	"github.com/sdrvirtual/codewoot/internal/codechat"
 	"github.com/sdrvirtual/codewoot/internal/config"
 	"github.com/sdrvirtual/codewoot/internal/dto"
@@ -31,7 +31,22 @@ func NewCodechatService(cfg *config.Config) *CodechatService {
 	}
 }
 
-func (c* CodechatService) SendTextMessage(toNumber string, text string) error {
+func (c* CodechatService) GetAudioContent(ctx context.Context, message *dto.CodechatData) (*dto.FileData, error) {
+	data, err := c.client.GetMediaData(ctx, message)
+	if err != nil {
+		return nil, err
+	}
+	mp3Data, err:= audio.TranscodeOggToMp3(data.File)
+	if err != nil {
+		return nil, err
+	}
+	data.File = mp3Data
+	data.Mimetype = "audio/mpeg"
+	data.Name = strings.Split(data.Name, ".")[0] + ".mp3"
+	return data, nil
+}
+
+func (c* CodechatService) SendMessage(toNumber string, text string) error {
 	payload := map[string]any{
 		"number": toNumber,
 		"textMessage": map[string]any{
@@ -40,22 +55,4 @@ func (c* CodechatService) SendTextMessage(toNumber string, text string) error {
 	}
 	_, err := c.client.SendText(context.TODO(), payload)
 	return err
-}
-
-func (c* CodechatService) GetAudioContent(ctx context.Context, message *dto.CodechatData) (*dto.FileData, error) {
-	data, err := c.client.GetMediaData(ctx, message)
-	if err != nil {
-		return nil, err
-	}
-
-	file ,err := os.Create("./"+data.Name)
-	if err != nil {
-		return nil, err
-	}
-	_, err = io.Copy(file, data.File)
-
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
 }
