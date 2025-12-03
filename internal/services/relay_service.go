@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -11,7 +12,7 @@ import (
 )
 
 type RelayService struct {
-	cfg *config.Config
+	cfg      *config.Config
 	codechat *CodechatService
 	chatwoot *ChatwootService
 }
@@ -20,7 +21,7 @@ func NewRelayService(cfg *config.Config) *RelayService {
 	// codechatInstanceToken := ""
 	// instance := "codechat_v1"
 	return &RelayService{
-		cfg: cfg,
+		cfg:      cfg,
 		codechat: NewCodechatService(cfg),
 		chatwoot: NewChatwootService(cfg),
 	}
@@ -36,7 +37,7 @@ func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 	phone := "+" + strings.Split(payload.Data.KeyRemoteJid, "@")[0]
 
 	contact := ContactInfo{
-		Name: name,
+		Name:  name,
 		Phone: phone,
 	}
 
@@ -48,30 +49,35 @@ func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 	case dto.CodechatAudioContent:
 		audioData, err := r.codechat.GetAudioContent(ctx, &payload.Data)
 		if err != nil {
-			fmt.Println(err)
+			return err
 		}
+		message.FileType = "audio"
 		message.Attachment = audioData
 	case dto.CodechatImageContent:
-		fmt.Println("is image", content.Caption)
+		return fmt.Errorf("received message with images")
 	}
 
 	return r.chatwoot.SendMessage(ctx, contact, message)
 }
 
 func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
-	// s, _ := json.MarshalIndent(payload, "", "\t")
-	// fmt.Println(string(s))
 	if payload.Event != "message_created" || payload.MessageType != "outgoing" || payload.Private {
 		return nil
 	}
 
-	number := strings.TrimPrefix(payload.Conversation.Meta.Sender.PhoneNumber, "+")
+	contact := ContactInfo{
+		Name:  payload.Conversation.Meta.Sender.Name,
+		Phone: strings.TrimPrefix(payload.Conversation.Meta.Sender.PhoneNumber, "+"),
+	}
+
+	s, _ := json.MarshalIndent(payload, "", "\t")
+	fmt.Println(string(s))
 
 	for _, m := range payload.Conversation.Messages {
-		err := r.codechat.SendTextMessage(number, m.Content)
-		if err != nil {
-			return err
-		}
+		// err := r.codechat.SendTextMessage(number, m.Content)
+		// if err != nil {
+		// 	return err
+		// }
 	}
 	return nil
 }
