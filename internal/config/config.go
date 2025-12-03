@@ -28,7 +28,7 @@ func Load() (*Config, error) {
 	cfg := &Config{}
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("Error loading .env file")
+		log.Println("Error loading .env file, loading from environment variables.")
 	}
 
 	cfg.Server.Port = getEnv("PORT", "8080")
