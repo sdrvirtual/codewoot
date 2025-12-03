@@ -14,15 +14,15 @@ func ChatwootWebhook(cfg *config.Config) http.HandlerFunc {
 		var payload dto.ChatwootWebhook
 
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			http.Error(w, "invalid payload", http.StatusBadRequest)
+			http.Error(w, "invalid payload:\n"+err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		relay := services.NewRelayService(cfg)
-		relay.FromChatwoot(payload)
-
-		// s, _ := json.MarshalIndent(payload, "", "\t")
-		// fmt.Println(string(s))
+		if err := relay.FromChatwoot(payload); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
 	}

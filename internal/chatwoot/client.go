@@ -65,21 +65,27 @@ func (c *Client) newRequest(ctx context.Context, method, p string, body any) (*h
 	u.Path = path.Join(c.baseURL.Path, p)
 
 	var rdr io.Reader
+	setJSON := false
 	if body != nil {
-		buf := &bytes.Buffer{}
-		enc := json.NewEncoder(buf)
-		enc.SetEscapeHTML(false)
-		if err := enc.Encode(body); err != nil {
-			return nil, fmt.Errorf("encode body: %w", err)
+		if r, ok := body.(io.Reader); ok {
+			rdr = r
+		} else {
+			buf := &bytes.Buffer{}
+			enc := json.NewEncoder(buf)
+			enc.SetEscapeHTML(false)
+			if err := enc.Encode(body); err != nil {
+				return nil, fmt.Errorf("encode body: %w", err)
+			}
+			rdr = buf
+			setJSON = true
 		}
-		rdr = buf
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), rdr)
 	if err != nil {
 		return nil, err
 	}
-	if body != nil {
+	if setJSON {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if c.token != "" {

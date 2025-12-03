@@ -1,10 +1,11 @@
 package services
 
 import (
-	"encoding/json"
-	"log"
+	"context"
+	"fmt"
 	"strings"
 
+	"github.com/sdrvirtual/codewoot/internal/chatwoot"
 	"github.com/sdrvirtual/codewoot/internal/config"
 	"github.com/sdrvirtual/codewoot/internal/dto"
 )
@@ -25,14 +26,36 @@ func NewRelayService(cfg *config.Config) *RelayService {
 	}
 }
 
-func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) {
-	s, _ := json.MarshalIndent(payload, "", "\t")
-
+func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 	if payload.Data.IsGroup || payload.Data.KeyFromMe || payload.Event != "messages.upsert" {
-		return
+		return nil
 	}
 
-	log.Println(string(s))
+	ctx := context.TODO()
+	name := payload.Data.PushName
+	phone := "+" + strings.Split(payload.Data.KeyRemoteJid, "@")[0]
+
+	contact := ContactInfo{
+		Name: name,
+		Phone: phone,
+	}
+
+	message := chatwoot.NewChatwootClientMessage()
+
+	switch content := payload.Data.Content.(type) {
+	case dto.CodechatTextContent:
+		message.Text = content.Text
+	case dto.CodechatAudioContent:
+		audioData, err := r.codechat.GetAudioContent(ctx, &payload.Data)
+		if err != nil {
+			fmt.Println(err)
+		}
+		message.Attachment = audioData
+	case dto.CodechatImageContent:
+		fmt.Println("is image", content.Caption)
+	}
+
+	return r.chatwoot.SendMessage(ctx, contact, message)
 }
 
 func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {

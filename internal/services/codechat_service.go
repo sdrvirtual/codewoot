@@ -2,10 +2,13 @@ package services
 
 import (
 	"context"
+	"io"
 	"log"
+	"os"
 
 	"github.com/sdrvirtual/codewoot/internal/codechat"
 	"github.com/sdrvirtual/codewoot/internal/config"
+	"github.com/sdrvirtual/codewoot/internal/dto"
 )
 
 type CodechatService struct {
@@ -37,4 +40,22 @@ func (c* CodechatService) SendTextMessage(toNumber string, text string) error {
 	}
 	_, err := c.client.SendText(context.TODO(), payload)
 	return err
+}
+
+func (c* CodechatService) GetAudioContent(ctx context.Context, message *dto.CodechatData) (*dto.FileData, error) {
+	data, err := c.client.GetMediaData(ctx, message)
+	if err != nil {
+		return nil, err
+	}
+
+	file ,err := os.Create("./"+data.Name)
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(file, data.File)
+
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
