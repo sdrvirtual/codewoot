@@ -7,6 +7,7 @@ import (
 
 	"github.com/sdrvirtual/codewoot/internal/chatwoot"
 	"github.com/sdrvirtual/codewoot/internal/config"
+	"github.com/sdrvirtual/codewoot/internal/domain"
 	"github.com/sdrvirtual/codewoot/internal/dto"
 )
 
@@ -14,11 +15,6 @@ type ChatwootService struct {
 	cfg     *config.Config
 	client  *chatwoot.Client
 	inboxId int
-}
-
-type ContactInfo struct {
-	Name    string
-	Phone   string
 }
 
 type ConversationID int
@@ -36,7 +32,7 @@ func NewChatwootService(cfg *config.Config) *ChatwootService {
 	return &ChatwootService{cfg, client, inboxID}
 }
 
-func (c *ChatwootService) SetupContact(ctx context.Context, contact *ContactInfo) (*dto.CWContact, error) {
+func (c *ChatwootService) SetupContact(ctx context.Context, contact *domain.ContactInfo) (*dto.CWContact, error) {
 	ctt, err := c.client.GetContactByPhone(ctx, contact.Phone)
 	if err != nil {
 		return nil, err
@@ -67,7 +63,7 @@ func (c *ChatwootService) setupInbox(ctx context.Context, contact *dto.CWContact
 	return cttInbox, nil
 }
 
-func (c *ChatwootService) setupConversation(ctx context.Context, contact *ContactInfo) (ConversationID, error) {
+func (c *ChatwootService) setupConversation(ctx context.Context, contact *domain.ContactInfo) (ConversationID, error) {
 	ctt, err := c.SetupContact(ctx, contact)
 	if err != nil {
 		return -1, err
@@ -99,7 +95,7 @@ func (c *ChatwootService) setupConversation(ctx context.Context, contact *Contac
 	return ConversationID(convID), err
 }
 
-func (c *ChatwootService) SendMessage(ctx context.Context, contact ContactInfo, message chatwoot.ChatwootClientMessage) error {
+func (c *ChatwootService) SendMessage(ctx context.Context, contact domain.ContactInfo, message chatwoot.ChatwootClientMessage) error {
 	id, err := c.setupConversation(ctx, &contact)
 	message.ConversationID = int(id)
 	if err != nil {
