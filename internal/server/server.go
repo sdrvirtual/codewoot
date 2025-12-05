@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sdrvirtual/codewoot/internal/config"
 	"github.com/sdrvirtual/codewoot/internal/handlers"
 )
@@ -69,7 +70,7 @@ func errorLogger(next http.Handler) http.Handler {
 	})
 }
 
-func New(cfg *config.Config) *http.Server {
+func New(cfg *config.Config, p *pgxpool.Pool) *http.Server {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -80,14 +81,17 @@ func New(cfg *config.Config) *http.Server {
 
 	r.Get("/health", handlers.Health)
 
+	r.Route("/session", func(r chi.Router) {
+		r.Post("/", handlers.CreateSession(cfg, p))
+	})
 	// chatwoot -> codewoot -> codechat
 	r.Route("/chatwoot", func(r chi.Router) {
-		r.Post("/webhook/{data}", handlers.ChatwootWebhook(cfg))
+		r.Post("/webhook/{session}", handlers.ChatwootWebhook(cfg, p))
 	})
 
 	// codechat -> codewoot -> chatwoot
 	r.Route("/codechat", func(r chi.Router) {
-		r.Post("/webhook/{data}", handlers.CodechatWebhook(cfg))
+		r.Post("/webhook/{session}", handlers.CodechatWebhook(cfg, p))
 	})
 
 	// TODO: CORS, Auth, Middleware contexto do request (instancia, etc..)

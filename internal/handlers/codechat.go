@@ -1,60 +1,51 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sdrvirtual/codewoot/internal/config"
 	"github.com/sdrvirtual/codewoot/internal/dto"
 	"github.com/sdrvirtual/codewoot/internal/services"
 )
 
-// func CodechatWebhook(cfg *config.Config) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		var payload dto.CodechatWebhook
+func CodechatWebhook(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+			return
+		}
 
-// 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-// 			http.Error(w, "invalid payload:\n"+err.Error(), http.StatusBadRequest)
-// 			return
-// 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 2<<20) // 2MB
 
-// 		relay := services.NewRelayService(cfg)
-// 		if err := relay.FromCodechat(payload); err != nil {
-// 			http.Error(w, err.Error(), http.StatusInternalServerError)
-// 			return
-// 		}
+		var payload dto.CodechatWebhook
 
-// 		w.WriteHeader(http.StatusOK)
-// 	}
-// }
+		dec := json.NewDecoder(r.Body)
 
-func CodechatWebhook(cfg *config.Config) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        if r.Header.Get("Content-Type") != "application/json" {
-            http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
-            return
-        }
+		if err := dec.Decode(&payload); err != nil {
+			http.Error(w, "invalid payload:\n"+err.Error(), http.StatusBadRequest)
+			return
+		}
 
-        // Prevent huge bodies
-        r.Body = http.MaxBytesReader(w, r.Body, 2<<20) // 2MB
+		session := chi.URLParam(r, "session")
+		if session == "" {
+			http.Error(w, "missing required path param: session", http.StatusBadRequest)
+			return
+		}
 
-        var payload dto.CodechatWebhook
+		relay, err := services.NewRelayService(context.WithValue(r.Context(), "session", session), cfg, p, session)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
 
-        // Use Decoder that rejects unknown fields (optional but safer)
-        dec := json.NewDecoder(r.Body)
+		if err := relay.FromCodechat(payload); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-        if err := dec.Decode(&payload); err != nil {
-            http.Error(w, "invalid payload:\n"+err.Error(), http.StatusBadRequest)
-            return
-        }
-
-        relay := services.NewRelayService(cfg)
-
-        if err := relay.FromCodechat(payload); err != nil {
-            http.Error(w, err.Error(), http.StatusInternalServerError)
-            return
-        }
-
-        w.WriteHeader(http.StatusOK)
-    }
+		w.WriteHeader(http.StatusOK)
+	}
 }

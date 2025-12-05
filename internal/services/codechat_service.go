@@ -8,6 +8,7 @@ import (
 	"github.com/sdrvirtual/codewoot/internal/audio"
 	"github.com/sdrvirtual/codewoot/internal/codechat"
 	"github.com/sdrvirtual/codewoot/internal/config"
+	"github.com/sdrvirtual/codewoot/internal/db"
 	"github.com/sdrvirtual/codewoot/internal/domain"
 	"github.com/sdrvirtual/codewoot/internal/dto"
 )
@@ -17,10 +18,10 @@ type CodechatService struct {
 	client *codechat.Client
 }
 
-func NewCodechatService(cfg *config.Config) *CodechatService {
+func NewCodechatService(cfg *config.Config, session db.CodechatSession) *CodechatService {
 	// TODO: Pegar da db
-	instance := "codechat_v1"
-	instanceToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpbnN0YW5jZU5hbWUiOiJjb2RlY2hhdF92MSIsImFwaU5hbWUiOiJ3aGF0c2FwcC1hcGkiLCJ0b2tlbklkIjoiMDFLQjNZMFlYVDY4QkRCOFo4UEtIRDY1WTkiLCJpYXQiOjE3NjQyODk5NjksImV4cCI6MTc2NDI4OTk2OSwic3ViIjoiZy10In0.HSVHOU_kCwOguJv-bLN23hpxibYuveXfPylq9DxITI4"
+	instance := session.CodechatInstance
+	instanceToken := session.CodechatInstcanceToken
 	codechatClient, err := codechat.New(cfg.Codechat.URL, cfg.Codechat.GlobalToken, codechat.WithInstanceToken(instanceToken, instance))
 
 	if err != nil {
@@ -60,7 +61,19 @@ func (c *CodechatService) GetAudioContent(ctx context.Context, message *dto.Code
 
 func (c *CodechatService) SendMessage(ctx context.Context, contact domain.ContactInfo, message CodechatClientMessage) error {
 	if message.MediaURL != nil {
-
+		params := codechat.SendMediaParams{
+			Number: contact.Phone,
+			MediaMessage: codechat.CCMediaMessage{
+				Media: *message.MediaURL,
+				Mediatype: "image", // TODO: Handle different media types
+				Caption: message.Text,
+			},
+		}
+		_, err := c.client.SendMedia(ctx, params)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 	if message.AudioURL != nil {
 		params := codechat.SendWhatsappAudioParams{
@@ -75,7 +88,7 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 	}
 
 
-	if message.Text != "" {
+	if message.Text != "" && message.MediaURL == nil{
 		params := codechat.SendTextParams{
 			Number: contact.Phone,
 			TextMessage: codechat.CCTextMessage{Text: message.Text},

@@ -7,6 +7,7 @@ import (
 
 	"github.com/sdrvirtual/codewoot/internal/chatwoot"
 	"github.com/sdrvirtual/codewoot/internal/config"
+	"github.com/sdrvirtual/codewoot/internal/db"
 	"github.com/sdrvirtual/codewoot/internal/domain"
 	"github.com/sdrvirtual/codewoot/internal/dto"
 )
@@ -14,17 +15,17 @@ import (
 type ChatwootService struct {
 	cfg     *config.Config
 	client  *chatwoot.Client
-	inboxId int
+	inboxID int
 }
 
 type ConversationID int
 
-func NewChatwootService(cfg *config.Config) *ChatwootService {
+func NewChatwootService(cfg *config.Config, session db.CodechatSession) *ChatwootService {
 	// TODO: Colocar isso na db
-	token := "7ufe5YTVz6gDrCYfVRV18uVr"
-	account_id := 2
-	inboxID := 1
-	client, err := chatwoot.New(cfg.Chatwoot.URL, token, account_id)
+	token := session.ChatwootToken
+	accountID := int(session.ChatwootAccountID)
+	inboxID := int(session.ChatwootInboxID)
+	client, err := chatwoot.New(cfg.Chatwoot.URL, token, accountID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,7 +40,7 @@ func (c *ChatwootService) SetupContact(ctx context.Context, contact *domain.Cont
 	}
 	if ctt == nil {
 		ctt, err = c.client.CreateContact(ctx, chatwoot.CreateContactParams{
-			InboxID:     c.inboxId,
+			InboxID:     c.inboxID,
 			Name:        contact.Name,
 			PhoneNumber: contact.Phone},
 		)
@@ -52,11 +53,11 @@ func (c *ChatwootService) SetupContact(ctx context.Context, contact *domain.Cont
 
 func (c *ChatwootService) setupInbox(ctx context.Context, contact *dto.CWContact) (*dto.CWContactInbox, error) {
 	for _, ci := range contact.ContactInboxes {
-		if ci.Inbox.ID == c.inboxId {
+		if ci.Inbox.ID == c.inboxID {
 			return &ci, nil
 		}
 	}
-	cttInbox, err := c.client.CreateContactInbox(ctx, contact.ID, chatwoot.CreateContactInboxParams{InboxID: c.inboxId})
+	cttInbox, err := c.client.CreateContactInbox(ctx, contact.ID, chatwoot.CreateContactInboxParams{InboxID: c.inboxID})
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func (c *ChatwootService) setupConversation(ctx context.Context, contact *domain
 	}
 	// Try to find an open conversation
 	for _, conv := range cttConv {
-		if conv.InboxID == c.inboxId {
+		if conv.InboxID == c.inboxID {
 			return ConversationID(conv.ID), nil
 		}
 	}
