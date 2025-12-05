@@ -111,42 +111,31 @@ func (c *Client) newRequest(ctx context.Context, method, p string, body any) (*h
 	return req, nil
 }
 
-func (c *Client) doJSON(req *http.Request) (json.RawMessage, error) {
+func (c *Client) do(req *http.Request) (json.RawMessage, *http.Response, error) {
 	if c.logf != nil {
 		c.logf("%s %s", req.Method, req.URL.String())
 	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	b, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return nil, &APIError{StatusCode: res.StatusCode, Body: string(b)}
-	}
-
-	return json.RawMessage(b), nil
-}
-
-
-func (c *Client) do(req *http.Request) (*http.Response, error) {
-	if c.logf != nil {
-		c.logf("%s %s", req.Method, req.URL.String())
-	}
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		b, _ := io.ReadAll(res.Body)
-		return nil, &APIError{StatusCode: res.StatusCode, Body: string(b)}
+		_ = res.Body.Close()
+		return nil, nil, &APIError{StatusCode: res.StatusCode, Body: string(b)}
 	}
 
-	return res, nil
+	ct := res.Header.Get("Content-Type")
+	if strings.Contains(ct, "application/json") || strings.Contains(ct, "json") {
+		b, err := io.ReadAll(res.Body)
+		_ = res.Body.Close()
+		if err != nil {
+			return nil, nil, err
+		}
+		return json.RawMessage(b), nil, nil
+	}
+
+	// Non-JSON: return the response for the caller to consume/stream and close.
+	return nil, res, nil
 }

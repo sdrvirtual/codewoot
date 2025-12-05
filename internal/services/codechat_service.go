@@ -8,12 +8,13 @@ import (
 	"github.com/sdrvirtual/codewoot/internal/audio"
 	"github.com/sdrvirtual/codewoot/internal/codechat"
 	"github.com/sdrvirtual/codewoot/internal/config"
+	"github.com/sdrvirtual/codewoot/internal/domain"
 	"github.com/sdrvirtual/codewoot/internal/dto"
 )
 
 type CodechatService struct {
-	cfg           *config.Config
-	client        *codechat.Client
+	cfg    *config.Config
+	client *codechat.Client
 }
 
 func NewCodechatService(cfg *config.Config) *CodechatService {
@@ -26,17 +27,28 @@ func NewCodechatService(cfg *config.Config) *CodechatService {
 		log.Fatal(err)
 	}
 	return &CodechatService{
-		cfg:           cfg,
-		client:        codechatClient,
+		cfg:    cfg,
+		client: codechatClient,
 	}
 }
 
-func (c* CodechatService) GetAudioContent(ctx context.Context, message *dto.CodechatData) (*dto.FileData, error) {
+type CodechatClientMessage struct {
+	Text        string
+	PhoneNumber string
+	MediaURL    *string
+	AudioURL    *string
+}
+
+func NewCodechatClientMessage() CodechatClientMessage {
+	return CodechatClientMessage{}
+}
+
+func (c *CodechatService) GetAudioContent(ctx context.Context, message *dto.CodechatData) (*dto.FileData, error) {
 	data, err := c.client.GetMediaData(ctx, message)
 	if err != nil {
 		return nil, err
 	}
-	mp3Data, err:= audio.TranscodeOggToMp3(data.File)
+	mp3Data, err := audio.TranscodeOggToMp3(data.File)
 	if err != nil {
 		return nil, err
 	}
@@ -46,13 +58,33 @@ func (c* CodechatService) GetAudioContent(ctx context.Context, message *dto.Code
 	return data, nil
 }
 
-func (c* CodechatService) SendMessage(toNumber string, text string) error {
-	payload := map[string]any{
-		"number": toNumber,
-		"textMessage": map[string]any{
-			"text": text,
-		},
+func (c *CodechatService) SendMessage(ctx context.Context, contact domain.ContactInfo, message CodechatClientMessage) error {
+	if message.MediaURL != nil {
+
 	}
-	_, err := c.client.SendText(context.TODO(), payload)
-	return err
+	if message.AudioURL != nil {
+		params := codechat.SendWhatsappAudioParams{
+			Number: contact.Phone,
+			AudioMessage: codechat.CCAudioMessage{Audio: *message.AudioURL},
+		}
+		_, err := c.client.SendWhatsappAudio(ctx, params)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+
+	if message.Text != "" {
+		params := codechat.SendTextParams{
+			Number: contact.Phone,
+			TextMessage: codechat.CCTextMessage{Text: message.Text},
+		}
+		_, err := c.client.SendText(ctx, params)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return nil
 }

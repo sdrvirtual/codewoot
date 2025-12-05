@@ -2,12 +2,12 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/sdrvirtual/codewoot/internal/chatwoot"
 	"github.com/sdrvirtual/codewoot/internal/config"
+	"github.com/sdrvirtual/codewoot/internal/domain"
 	"github.com/sdrvirtual/codewoot/internal/dto"
 )
 
@@ -33,12 +33,10 @@ func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 	}
 
 	ctx := context.TODO()
-	name := payload.Data.PushName
-	phone := "+" + strings.Split(payload.Data.KeyRemoteJid, "@")[0]
 
-	contact := ContactInfo{
-		Name:  name,
-		Phone: phone,
+	contact := domain.ContactInfo{
+		Name:  payload.Data.PushName,
+		Phone: "+" + strings.Split(payload.Data.KeyRemoteJid, "@")[0],
 	}
 
 	message := chatwoot.NewChatwootClientMessage()
@@ -65,19 +63,30 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 		return nil
 	}
 
-	contact := ContactInfo{
+	contact := domain.ContactInfo{
 		Name:  payload.Conversation.Meta.Sender.Name,
 		Phone: strings.TrimPrefix(payload.Conversation.Meta.Sender.PhoneNumber, "+"),
 	}
 
-	s, _ := json.MarshalIndent(payload, "", "\t")
-	fmt.Println(string(s))
+	ctx := context.TODO()
 
 	for _, m := range payload.Conversation.Messages {
-		// err := r.codechat.SendTextMessage(number, m.Content)
-		// if err != nil {
-		// 	return err
-		// }
+		message := NewCodechatClientMessage()
+
+		if m.Content != nil {
+			message.Text = *m.Content
+		}
+
+		for _, a := range m.Attachments {
+			switch a.FileType {
+			case "audio":
+				message.AudioURL = a.DataURL
+			}
+		}
+
+		if err := r.codechat.SendMessage(ctx, contact, message); err != nil {
+			return err
+		}
 	}
 	return nil
 }

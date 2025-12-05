@@ -18,6 +18,10 @@ func ChatwootWebhook(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
+		// a, _ := io.ReadAll(r.Body)
+		// s, _ := json.MarshalIndent(json.RawMessage(a), "", "  ")
+		// fmt.Println("------- FromChatwoot ----------\n", string(s))
+
 		relay := services.NewRelayService(cfg)
 		if err := relay.FromChatwoot(payload); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

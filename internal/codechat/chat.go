@@ -24,7 +24,7 @@ func (c *Client) GetMediaData(ctx context.Context, message *dto.CodechatData) (*
 	if err != nil {
 		return nil, err
 	}
-	r, err := c.do(req)
+	_, r, err := c.do(req)
 	if err != nil {
 		return nil, err
 	}

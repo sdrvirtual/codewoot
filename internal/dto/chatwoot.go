@@ -101,9 +101,177 @@ type CWWebhookContactInbox struct {
 	PubsubToken  string `json:"pubsub_token"`
 }
 
+// TEXT MESSAGE
+//     "messages": [
+//       {
+//         "id": 98,
+//         "content": "opa\n",
+//         "account_id": 2,
+//         "inbox_id": 1,
+//         "conversation_id": 12,
+//         "message_type": 1,
+//         "created_at": 1764803328,
+//         "updated_at": "2025-12-03T23:08:48.069Z",
+//         "private": false,
+//         "status": "sent",
+//         "source_id": null,
+//         "content_type": "text",
+//         "content_attributes": {},
+//         "sender_type": "User",
+//         "sender_id": 2,
+//         "external_source_ids": {},
+//         "additional_attributes": {},
+//         "processed_message_content": "opa\n",
+//         "sentiment": {},
+//         "conversation": {
+//           "assignee_id": 2,
+//           "unread_count": 0,
+//           "last_activity_at": 1764803328,
+//           "contact_inbox": {
+//             "source_id": "5a2148ac-6ede-4d2e-9f33-8d12b6e8ce1c"
+//           }
+//         },
+//         "sender": {
+//           "id": 2,
+//           "name": "Cássio",
+//           "available_name": "Cássio",
+//           "avatar_url": "",
+//           "type": "user",
+//           "availability_status": null,
+//           "thumbnail": ""
+//         }
+//       }
+//     ],
+
+// AUDIO MESSAGE
+//     "messages": [
+//       {
+//         "id": 99,
+//         "content": null,
+//         "account_id": 2,
+//         "inbox_id": 1,
+//         "conversation_id": 12,
+//         "message_type": 1,
+//         "created_at": 1764803563,
+//         "updated_at": "2025-12-03T23:12:43.839Z",
+//         "private": false,
+//         "status": "sent",
+//         "source_id": null,
+//         "content_type": "text",
+//         "content_attributes": {},
+//         "sender_type": "User",
+//         "sender_id": 2,
+//         "external_source_ids": {},
+//         "additional_attributes": {},
+//         "processed_message_content": null,
+//         "sentiment": {},
+//         "conversation": {
+//           "assignee_id": 2,
+//           "unread_count": 0,
+//           "last_activity_at": 1764803563,
+//           "contact_inbox": {
+//             "source_id": "5a2148ac-6ede-4d2e-9f33-8d12b6e8ce1c"
+//           }
+//         },
+//         "attachments": [
+//           {
+//             "id": 15,
+//             "message_id": 99,
+//             "file_type": "audio",
+//             "account_id": 2,
+//             "extension": null,
+//             "data_url": "http://localhost:3000/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBGQT09IiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--af4235df8dd0a4a4bbce663ede4661bd17d7f969/68ebb6434341.mp3",
+//             "thumb_url": "",
+//             "file_size": 52608,
+//             "width": null,
+//             "height": null,
+//             "transcribed_text": ""
+//           }
+//         ],
+//         "sender": {
+//           "id": 2,
+//           "name": "Cássio",
+//           "available_name": "Cássio",
+//           "avatar_url": "",
+//           "type": "user",
+//           "availability_status": null,
+//           "thumbnail": ""
+//         }
+//       }
+//     ],
+
+// MEDIA MESSAGE
+//     "messages": [
+//       {
+//         "id": 100,
+//         "content": "oiee",
+//         "account_id": 2,
+//         "inbox_id": 1,
+//         "conversation_id": 12,
+//         "message_type": 1,
+//         "created_at": 1764804115,
+//         "updated_at": "2025-12-03T23:21:55.704Z",
+//         "private": false,
+//         "status": "sent",
+//         "source_id": null,
+//         "content_type": "text",
+//         "content_attributes": {},
+//         "sender_type": "User",
+//         "sender_id": 2,
+//         "external_source_ids": {},
+//         "additional_attributes": {},
+//         "processed_message_content": "oiee",
+//         "sentiment": {},
+//         "conversation": {
+//           "assignee_id": 2,
+//           "unread_count": 0,
+//           "last_activity_at": 1764804115,
+//           "contact_inbox": {
+//             "source_id": "5a2148ac-6ede-4d2e-9f33-8d12b6e8ce1c"
+//           }
+//         },
+//         "attachments": [
+//           {
+//             "id": 16,
+//             "message_id": 100,
+//             "file_type": "image",
+//             "account_id": 2,
+//             "extension": null,
+//             "data_url": "http://localhost:3000/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBGUT09IiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--b44af82d04b087b545436b1c92e3fff2bbcf5841/05.png",
+//             "thumb_url": "http://localhost:3000/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBGUT09IiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--b44af82d04b087b545436b1c92e3fff2bbcf5841/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaDdCem9MWm05eWJXRjBTU0lJY0c1bkJqb0dSVlE2RTNKbGMybDZaVjkwYjE5bWFXeHNXd2RwQWZvdyIsImV4cCI6bnVsbCwicHVyIjoidmFyaWF0aW9uIn19--f1b26a23780bc9bc51fbe09fba8e4c2bd19fa942/05.png",
+//             "file_size": 3206366,
+//             "width": null,
+//             "height": null
+//           }
+//         ],
+//         "sender": {
+//           "id": 2,
+//           "name": "Cássio",
+//           "available_name": "Cássio",
+//           "avatar_url": "",
+//           "type": "user",
+//           "availability_status": null,
+//           "thumbnail": ""
+//         }
+//       }
+//     ],
+
+type CWAttachment struct {
+	ID        int     `json:"id"`
+	MessageID int     `json:"message_id"`
+	FileType  string  `json:"file_type"`
+	AccountID int     `json:"account_id"`
+	Extension *string `json:"extension"`
+	DataURL   *string `json:"data_url"`
+	ThumbURL  *string `json:"thumb_url"`
+	FileSize  int     `json:"file_size"`
+	Width     int     `json:"width"`
+	Height    int     `json:"height"`
+}
+
 type CWMessage struct {
 	ID                   int               `json:"id"`
-	Content              string            `json:"content"`
+	Content              *string           `json:"content"`
 	AccountID            int               `json:"account_id"`
 	InboxID              int               `json:"inbox_id"`
 	ConversationID       int               `json:"conversation_id"`
@@ -123,6 +291,7 @@ type CWMessage struct {
 	Sentiment            map[string]any    `json:"sentiment"`
 	Conversation         CWMsgConversation `json:"conversation"`
 	Sender               CWMessageSender   `json:"sender"`
+	Attachments          []CWAttachment    `json:"attachments"`
 }
 
 type CWMsgConversation struct {
