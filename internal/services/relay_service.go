@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sdrvirtual/codewoot/internal/chatwoot"
 	"github.com/sdrvirtual/codewoot/internal/config"
+	"github.com/sdrvirtual/codewoot/internal/db"
 	"github.com/sdrvirtual/codewoot/internal/domain"
 	"github.com/sdrvirtual/codewoot/internal/dto"
 )
@@ -17,14 +20,26 @@ type RelayService struct {
 	chatwoot *ChatwootService
 }
 
-func NewRelayService(cfg *config.Config) *RelayService {
-	// codechatInstanceToken := ""
-	// instance := "codechat_v1"
+func NewRelayService(ctx context.Context,cfg *config.Config, p *pgxpool.Pool, session string) (*RelayService, error) {
+	q := db.New(p)
+	var sessionUUID pgtype.UUID
+	err := sessionUUID.Scan(session)
+	if err != nil {
+		return nil, err
+	}
+	sessionObj, err := q.GetSessionBySessionId(ctx, sessionUUID)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return nil, fmt.Errorf("session %s does not exist", session)
+		}
+		return nil, err
+	}
+
 	return &RelayService{
 		cfg:      cfg,
-		codechat: NewCodechatService(cfg),
-		chatwoot: NewChatwootService(cfg),
-	}
+		codechat: NewCodechatService(cfg, sessionObj),
+		chatwoot: NewChatwootService(cfg, sessionObj),
+	}, nil
 }
 
 func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
@@ -73,14 +88,18 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 	for _, m := range payload.Conversation.Messages {
 		message := NewCodechatClientMessage()
 
+
 		if m.Content != nil {
 			message.Text = *m.Content
 		}
 
 		for _, a := range m.Attachments {
+			fmt.Println(a.FileType)
 			switch a.FileType {
 			case "audio":
 				message.AudioURL = a.DataURL
+			case "image":
+				message.MediaURL = a.DataURL
 			}
 		}
 

@@ -48,6 +48,8 @@
                 # https://github.com/golangci/golangci-lint
                 golangci-lint
                 gopls
+		sqlc
+		goose
                 aider-chat-with-playwright
 		            delve
               ];

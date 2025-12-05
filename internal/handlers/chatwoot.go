@@ -1,28 +1,48 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sdrvirtual/codewoot/internal/config"
 	"github.com/sdrvirtual/codewoot/internal/dto"
 	"github.com/sdrvirtual/codewoot/internal/services"
 )
 
-func ChatwootWebhook(cfg *config.Config) http.HandlerFunc {
+func ChatwootWebhook(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, 2<<20) // 2MB
+
+
+
 		var payload dto.ChatwootWebhook
 
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		dec := json.NewDecoder(r.Body)
+
+		if err := dec.Decode(&payload); err != nil {
 			http.Error(w, "invalid payload:\n"+err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		// a, _ := io.ReadAll(r.Body)
-		// s, _ := json.MarshalIndent(json.RawMessage(a), "", "  ")
-		// fmt.Println("------- FromChatwoot ----------\n", string(s))
+		session := chi.URLParam(r, "session")
+		if session == "" {
+			http.Error(w, "missing required path param: session", http.StatusBadRequest)
+			return
+		}
 
-		relay := services.NewRelayService(cfg)
+		relay, err := services.NewRelayService(context.WithValue(r.Context(), "session", session), cfg, p, session)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+
 		if err := relay.FromChatwoot(payload); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

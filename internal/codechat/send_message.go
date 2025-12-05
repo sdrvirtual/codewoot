@@ -11,8 +11,16 @@ import (
 type CCAudioMessage struct {
 	Audio string `json:"audio"`
 }
+
 type CCTextMessage struct {
 	Text string `json:"text"`
+}
+
+type CCMediaMessage struct {
+	Mediatype string `json:"mediatype,omitempty"`
+	FileName  string `json:"fileName,omitempty"`
+	Caption   string `json:"caption,omitempty"`
+	Media     string `json:"media"`
 }
 
 type CCMessageOptions struct {
@@ -33,11 +41,17 @@ type SendWhatsappAudioParams struct {
 	AudioMessage CCAudioMessage    `json:"audioMessage"`
 }
 
-func (c *Client) SendText(ctx context.Context, payload SendTextParams) (json.RawMessage, error) {
+type SendMediaParams struct {
+	Number       string            `json:"number"`
+	Options      *CCMessageOptions `json:"options,omitempty"`
+	MediaMessage CCMediaMessage    `json:"mediaMessage"`
+}
+
+func (c *Client) messageRequest(ctx context.Context, path string, payload any) (json.RawMessage, error) {
 	if c.instance == "" {
 		return nil, fmt.Errorf("instanceName is required")
 	}
-	p := fmt.Sprintf("/message/sendText/%s", url.PathEscape(c.instance))
+	p := fmt.Sprintf("/message/%s/%s", path, url.PathEscape(c.instance))
 	req, err := c.newRequest(ctx, http.MethodPost, p, payload)
 	if err != nil {
 		return nil, err
@@ -46,17 +60,14 @@ func (c *Client) SendText(ctx context.Context, payload SendTextParams) (json.Raw
 	return jr, err
 }
 
+func (c *Client) SendText(ctx context.Context, payload SendTextParams) (json.RawMessage, error) {
+	return c.messageRequest(ctx, "sendText", payload)
+}
+
 func (c *Client) SendWhatsappAudio(ctx context.Context, payload SendWhatsappAudioParams) (json.RawMessage, error) {
-	if c.instance == "" {
-		return nil, fmt.Errorf("instanceName is required")
-	}
-	s, _ := json.MarshalIndent(payload, "", "\t")
-	fmt.Println(string(s))
-	p := fmt.Sprintf("/message/sendWhatsappAudio/%s", url.PathEscape(c.instance))
-	req, err := c.newRequest(ctx, http.MethodPost, p, payload)
-	if err != nil {
-		return nil, err
-	}
-	jr, _, err := c.do(req)
-	return jr, err
+	return c.messageRequest(ctx, "sendWhatsappAudio", payload)
+}
+
+func (c *Client) SendMedia(ctx context.Context, payload SendMediaParams) (json.RawMessage, error) {
+	return c.messageRequest(ctx, "sendMedia", payload)
 }
