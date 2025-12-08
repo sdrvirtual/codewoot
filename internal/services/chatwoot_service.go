@@ -21,7 +21,6 @@ type ChatwootService struct {
 type ConversationID int
 
 func NewChatwootService(cfg *config.Config, session db.CodechatSession) *ChatwootService {
-	// TODO: Colocar isso na db
 	token := session.ChatwootToken
 	accountID := int(session.ChatwootAccountID)
 	inboxID := int(session.ChatwootInboxID)

@@ -19,7 +19,6 @@ type CodechatService struct {
 }
 
 func NewCodechatService(cfg *config.Config, session db.CodechatSession) *CodechatService {
-	// TODO: Pegar da db
 	instance := session.CodechatInstance
 	instanceToken := session.CodechatInstcanceToken
 	codechatClient, err := codechat.New(cfg.Codechat.URL, cfg.Codechat.GlobalToken, codechat.WithInstanceToken(instanceToken, instance))
