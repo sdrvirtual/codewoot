@@ -34,10 +34,12 @@ func NewCodechatService(cfg *config.Config, session db.CodechatSession) *Codecha
 }
 
 type CodechatClientMessage struct {
-	Text        string
-	PhoneNumber string
-	MediaURL    *string
-	AudioURL    *string
+	Text           string
+	PhoneNumber    string
+	AttachmentName *string
+	MediaURL       *string
+	AudioURL       *string
+	FileURL        *string
 }
 
 func NewCodechatClientMessage() CodechatClientMessage {
@@ -64,9 +66,9 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 		params := codechat.SendMediaParams{
 			Number: contact.Phone,
 			MediaMessage: codechat.CCMediaMessage{
-				Media: *message.MediaURL,
-				Mediatype: "image", // TODO: Handle different media types
-				Caption: message.Text,
+				Media:     *message.MediaURL,
+				Mediatype: "image",
+				Caption:   message.Text,
 			},
 		}
 		_, err := c.client.SendMedia(ctx, params)
@@ -77,7 +79,7 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 	}
 	if message.AudioURL != nil {
 		params := codechat.SendWhatsappAudioParams{
-			Number: contact.Phone,
+			Number:       contact.Phone,
 			AudioMessage: codechat.CCAudioMessage{Audio: *message.AudioURL},
 		}
 		_, err := c.client.SendWhatsappAudio(ctx, params)
@@ -86,11 +88,26 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 		}
 		return nil
 	}
-
-
-	if message.Text != "" && message.MediaURL == nil{
-		params := codechat.SendTextParams{
+	if message.FileURL != nil {
+		params := codechat.SendMediaParams{
 			Number: contact.Phone,
+			MediaMessage: codechat.CCMediaMessage{
+				Media:     *message.FileURL,
+				FileName: *message.AttachmentName,
+				Mediatype: "document",
+				Caption:   message.Text,
+			},
+		}
+		_, err := c.client.SendMedia(ctx, params)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if message.Text != "" && message.MediaURL == nil {
+		params := codechat.SendTextParams{
+			Number:      contact.Phone,
 			TextMessage: codechat.CCTextMessage{Text: message.Text},
 		}
 		_, err := c.client.SendText(ctx, params)

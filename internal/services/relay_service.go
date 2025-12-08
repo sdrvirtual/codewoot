@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"path"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -105,14 +107,20 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 		}
 
 		for _, a := range m.Attachments {
-			fmt.Println(a.FileType)
 			switch a.FileType {
 			case "audio":
 				message.AudioURL = a.DataURL
 			case "image":
 				message.MediaURL = a.DataURL
+			case "file":
+				message.FileURL = a.DataURL
+				u, err := url.Parse(*a.DataURL)
+				if err != nil {
+					return err
+				}
+				filename := path.Base(u.Path)
+				message.AttachmentName = &filename
 			}
-			// TODO: Handle documents
 		}
 
 		if err := r.codechat.SendMessage(*r.ctx, contact, message); err != nil {
