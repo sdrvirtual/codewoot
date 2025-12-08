@@ -98,8 +98,6 @@ func (c *Client) CreateMessage(ctx context.Context, message ChatwootClientMessag
 	if err != nil {
 		return nil, err
 	}
-	s, _ := json.MarshalIndent(raw, "", "  ")
-	fmt.Println(string(s))
 	var out dto.CWMessage
 	if err := json.Unmarshal(raw, &out); err != nil {
 		return nil, fmt.Errorf("create message: %w", err)

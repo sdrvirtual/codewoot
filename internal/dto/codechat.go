@@ -98,6 +98,12 @@ func (c *CodechatData) UnmarshalJSON(data []byte) error {
 	}
 
 	switch c.MessageType {
+	case "conversation":
+		var msg CodechatTextContent
+		if err := json.Unmarshal(aux.Content, &msg); err != nil {
+			return err
+		}
+		c.Content = msg
 	case "extendedTextMessage":
 		var msg CodechatTextContent
 		if err := json.Unmarshal(aux.Content, &msg); err != nil {

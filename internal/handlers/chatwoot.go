@@ -21,8 +21,6 @@ func ChatwootWebhook(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 
 		r.Body = http.MaxBytesReader(w, r.Body, 2<<20) // 2MB
 
-
-
 		var payload dto.ChatwootWebhook
 
 		dec := json.NewDecoder(r.Body)
@@ -33,7 +31,7 @@ func ChatwootWebhook(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		session := chi.URLParam(r, "session")
-		if session == "" {
+		if session != "" {
 			http.Error(w, "missing required path param: session", http.StatusBadRequest)
 			return
 		}
