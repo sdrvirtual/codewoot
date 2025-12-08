@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
@@ -31,14 +30,15 @@ func ChatwootWebhook(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		session := chi.URLParam(r, "session")
-		if session != "" {
+		if session == "" {
 			http.Error(w, "missing required path param: session", http.StatusBadRequest)
 			return
 		}
 
-		relay, err := services.NewRelayService(context.WithValue(r.Context(), "session", session), cfg, p, session)
+		relay, err := services.NewRelayService(r.Context(), cfg, p, session)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		if err := relay.FromChatwoot(payload); err != nil {
@@ -47,5 +47,6 @@ func ChatwootWebhook(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
 	}
 }

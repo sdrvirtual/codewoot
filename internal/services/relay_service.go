@@ -41,7 +41,7 @@ func NewRelayService(ctx context.Context, cfg *config.Config, p *pgxpool.Pool, s
 		cfg:      cfg,
 		codechat: NewCodechatService(cfg, sessionObj),
 		chatwoot: NewChatwootService(cfg, sessionObj),
-		ctx: &ctx,
+		ctx:      &ctx,
 	}, nil
 }
 
@@ -52,13 +52,13 @@ func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 
 	// TODO: Handle deleting messages
 
-	phone, err := utils.ValidatePhone("+" + strings.Split(payload.Data.KeyRemoteJid, "@")[0])
+	phone, err := utils.ValidatePhone(strings.Split(payload.Data.KeyRemoteJid, "@")[0])
 	if err != nil {
 		return err
 	}
 	contact := domain.ContactInfo{
 		Name:  payload.Data.PushName,
-		Phone: phone,
+		Phone: "+" + phone,
 	}
 
 	message := chatwoot.NewChatwootClientMessage()
