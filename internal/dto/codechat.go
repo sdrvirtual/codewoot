@@ -64,6 +64,13 @@ type CodechatAudioContent struct {
 
 func (CodechatAudioContent) isCodechatMessageContent() {}
 
+type CodechatDocumentContent struct {
+	// TODO
+}
+
+func (CodechatDocumentContent) isCodechatMessageContent() {}
+
+
 type CodechatData struct {
 	ID               int                    `json:"id"`
 	KeyID            string                 `json:"keyId"`
@@ -98,6 +105,12 @@ func (c *CodechatData) UnmarshalJSON(data []byte) error {
 	}
 
 	switch c.MessageType {
+	case "documentMessage":
+		var msg CodechatDocumentContent
+		if err := json.Unmarshal(aux.Content, &msg); err != nil {
+			return err
+		}
+		c.Content = msg
 	case "conversation":
 		var msg CodechatTextContent
 		if err := json.Unmarshal(aux.Content, &msg); err != nil {
