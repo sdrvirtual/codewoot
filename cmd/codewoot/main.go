@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 	"github.com/sdrvirtual/codewoot/internal/config"
 	"github.com/sdrvirtual/codewoot/internal/server"
 )
@@ -27,6 +30,15 @@ func main() {
 		log.Fatalln(err)
 	}
 	defer pool.Close()
+
+	db, err := sql.Open("pgx", cfg.Database.URL)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if err := goose.Up(db, "internal/db/migrations"); err != nil {
+		log.Fatalln(err)
+	}
+	db.Close()
 
 	srv := server.New(cfg, pool)
 	defer srv.Close()
