@@ -36,8 +36,6 @@
           { pkgs }:
           {
             default = pkgs.mkShellNoCC {
-              ANTHROPIC_API_KEY = "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";
-              OPENAI_API_KEY = "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";
               packages = with pkgs; [
                 # go (version is specified by overlay)
                 go
@@ -48,8 +46,8 @@
                 # https://github.com/golangci/golangci-lint
                 golangci-lint
                 gopls
-		sqlc
-		goose
+		            sqlc
+		            goose
                 aider-chat-with-playwright
 		            delve
               ];

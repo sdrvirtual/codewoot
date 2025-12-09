@@ -9,4 +9,3 @@ WORKDIR /app
 COPY --from=builder /app/app .
 RUN apk update && apk add --no-cache ffmpeg
 CMD ["./app"]
-
