@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -34,10 +33,7 @@ type Config struct {
 
 func Load() (*Config, error) {
 	cfg := &Config{}
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("Error loading .env file, loading from environment variables.")
-	}
+	godotenv.Load()
 
 	cfg.Server.Port = getEnv("PORT", "8080")
 	cfg.Server.Host = getEnv("HOST", "0.0.0.0")
