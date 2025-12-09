@@ -11,11 +11,11 @@ type Config struct {
 	Server struct {
 		Port string
 		Host string
+		URL string
 	}
 
 	Chatwoot struct {
 		URL   string
-		Token string
 	}
 
 	Codechat struct {
@@ -41,12 +41,13 @@ func Load() (*Config, error) {
 
 	cfg.Server.Port = getEnv("PORT", "8080")
 	cfg.Server.Host = getEnv("HOST", "0.0.0.0")
+	cfg.Server.URL = getEnv("API_URL", "http://localhost:8080")
 
 	cfg.Chatwoot.URL = os.Getenv("CHATWOOT_URL")
-	// cfg.Chatwoot.Token = os.Getenv("CHATWOOT_TOKEN")
 
 	cfg.Codechat.URL = os.Getenv("CODECHAT_URL")
 	cfg.Codechat.GlobalToken = os.Getenv("CODECHAT_KEY")
+
 	cfg.Database.URL = os.Getenv("DB_URL")
 	cfg.Authorization.Key = os.Getenv("API_KEY")
 

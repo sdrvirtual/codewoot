@@ -10,8 +10,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/render"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sdrvirtual/codewoot/internal/config"
+	"github.com/sdrvirtual/codewoot/internal/dto"
 	"github.com/sdrvirtual/codewoot/internal/handlers"
 )
 
@@ -70,6 +72,35 @@ func errorLogger(next http.Handler) http.Handler {
 	})
 }
 
+func authMiddleware(cfg *config.Config) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Api-Key") == "" {
+				render.Status(r, http.StatusUnauthorized)
+				render.Render(w, r, dto.NewAPIErrorResponse("not authorized", "missing Api-Key header"))
+				return
+			}
+			if r.Header.Get("Api-Key") != cfg.Authorization.Key {
+				render.Status(r, http.StatusUnauthorized)
+				render.Render(w, r, dto.NewAPIErrorResponse("not authorized", "invalid token"))
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func SessionRouter(cfg *config.Config, p *pgxpool.Pool) http.Handler {
+	r := chi.NewRouter()
+	r.Use(authMiddleware(cfg))
+	r.Post("/", handlers.CreateSession(cfg, p))
+	r.Route("/{session}", func(r chi.Router) {
+		r.Get("/", handlers.StatusSession(cfg, p))
+		r.Post("/connect", handlers.ConnectSession(cfg, p))
+	})
+	return r
+}
+
 func New(cfg *config.Config, p *pgxpool.Pool) *http.Server {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -81,9 +112,8 @@ func New(cfg *config.Config, p *pgxpool.Pool) *http.Server {
 
 	r.Get("/health", handlers.Health)
 
-	r.Route("/session", func(r chi.Router) {
-		r.Post("/", handlers.CreateSession(cfg, p))
-	})
+	r.Mount("/session", SessionRouter(cfg, p))
+
 	// chatwoot -> codewoot -> codechat
 	r.Route("/chatwoot", func(r chi.Router) {
 		r.Post("/webhook/{session}", handlers.ChatwootWebhook(cfg, p))
