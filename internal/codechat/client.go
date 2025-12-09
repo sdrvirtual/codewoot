@@ -57,9 +57,9 @@ func New(base, token string, opts ...Option) (*Client, error) {
 	u.Path = strings.TrimSuffix(u.Path, "/")
 
 	c := &Client{
-		baseURL:        u,
-		globalToken:    token,
-		httpClient:     &http.Client{Timeout: 30 * time.Second},
+		baseURL:     u,
+		globalToken: token,
+		httpClient:  &http.Client{Timeout: 30 * time.Second},
 	}
 	for _, opt := range opts {
 		opt(c)

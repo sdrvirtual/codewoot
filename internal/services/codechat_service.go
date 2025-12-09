@@ -92,7 +92,7 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 			Number: contact.Phone,
 			MediaMessage: codechat.CCMediaMessage{
 				Media:     *message.FileURL,
-				FileName: *message.AttachmentName,
+				FileName:  *message.AttachmentName,
 				Mediatype: "document",
 				Caption:   message.Text,
 			},

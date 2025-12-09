@@ -70,7 +70,6 @@ type CodechatDocumentContent struct {
 
 func (CodechatDocumentContent) isCodechatMessageContent() {}
 
-
 type CodechatData struct {
 	ID               int                    `json:"id"`
 	KeyID            string                 `json:"keyId"`

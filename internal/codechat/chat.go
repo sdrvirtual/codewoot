@@ -35,9 +35,9 @@ func (c *Client) GetMediaData(ctx context.Context, message *dto.CodechatData) (*
 	}
 
 	fileData := dto.FileData{
-		Name: params["filename"],
+		Name:     params["filename"],
 		Mimetype: r.Header.Get("Content-Type"),
-		File: r.Body,
+		File:     r.Body,
 	}
 
 	return &fileData, nil

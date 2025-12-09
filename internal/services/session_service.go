@@ -118,7 +118,6 @@ func (s *SessionService) SetWebhook(instance string) error {
 	return err
 }
 
-
 func (s *SessionService) FetchInstance(instance string) (*codechat.FetchInstanceResponse, error) {
 	r, err := s.client.FetchInstance(*s.ctx)
 	return r, err

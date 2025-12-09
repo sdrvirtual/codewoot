@@ -7,7 +7,7 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
-func TranscodeOggToMp3 (oggfile io.Reader) (io.Reader, error) {
+func TranscodeOggToMp3(oggfile io.Reader) (io.Reader, error) {
 	var out bytes.Buffer
 
 	err := ffmpeg.

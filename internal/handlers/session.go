@@ -36,7 +36,7 @@ func newCreateSessionResponse(cfg *config.Config, session db.CodechatSession) *C
 
 type StatusSessionResponse struct {
 	CreateSessionResponse
-	Status    string `json:"status"`
+	Status string `json:"status"`
 }
 
 func (rd *StatusSessionResponse) Render(w http.ResponseWriter, r *http.Request) error { return nil }
@@ -44,7 +44,7 @@ func (rd *StatusSessionResponse) Render(w http.ResponseWriter, r *http.Request) 
 func newStatusSessionResponse(cfg *config.Config, session db.CodechatSession, status string) *StatusSessionResponse {
 	return &StatusSessionResponse{
 		CreateSessionResponse: *newCreateSessionResponse(cfg, session),
-		Status: status,
+		Status:                status,
 	}
 }
 

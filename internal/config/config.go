@@ -10,15 +10,15 @@ type Config struct {
 	Server struct {
 		Port string
 		Host string
-		URL string
+		URL  string
 	}
 
 	Chatwoot struct {
-		URL   string
+		URL string
 	}
 
 	Codechat struct {
-		URL string
+		URL         string
 		GlobalToken string
 	}
 

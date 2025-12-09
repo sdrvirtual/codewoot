@@ -69,7 +69,7 @@ func (c *ChatwootService) setupConversation(ctx context.Context, contact *domain
 		return -1, err
 	}
 	if ctt == nil || ctt.ID < 1 {
-		return  -1, fmt.Errorf("couldn't find or create account")
+		return -1, fmt.Errorf("couldn't find or create account")
 	}
 
 	cttConv, err := c.client.GetContactConversations(ctx, ctt.ID)

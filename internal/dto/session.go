@@ -1,7 +1,7 @@
 package dto
 
 type CreateSession struct {
-	SessionID  *string  `json:"session_id"`
+	SessionID   *string `json:"session_id"`
 	Description *string `json:"description"`
 	Chatwoot    struct {
 		InboxID   int    `json:"inbox_id"`
@@ -9,4 +9,3 @@ type CreateSession struct {
 		Token     string `json:"token"`
 	} `json:"chatwoot"`
 }
-
