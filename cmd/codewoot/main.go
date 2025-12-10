@@ -42,6 +42,7 @@ func main() {
 
 	srv := server.New(cfg, pool)
 	defer srv.Close()
+	nanananan
 
 	log.Printf("Starting server on %s:%s", cfg.Server.Host, cfg.Server.Port)
 	if err := srv.ListenAndServe(); err != nil {
