@@ -137,7 +137,6 @@ func (c *CodechatData) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(aux.Content, &msg); err != nil {
 			return err
 		}
-
 		c.Content = msg
 
 	default:
