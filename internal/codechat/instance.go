@@ -100,3 +100,40 @@ func (c *Client) ConnectInstance(ctx context.Context) (*ConnectInstanceResponse,
 	}
 	return &resp, nil
 }
+
+func (c *Client) LogoutInstance(ctx context.Context) (*json.RawMessage, error) {
+	if c.instance == "" {
+		return nil, fmt.Errorf("instance is required")
+	}
+	p := "/instance/logout/" + url.PathEscape(c.instance)
+	req, err := c.newRequest(ctx, http.MethodDelete, p, nil)
+	if err != nil {
+		return nil, err
+	}
+	jr, _, err := c.do(req)
+	if err != nil {
+		return nil, err
+	}
+	return &jr, nil
+}
+
+func (c *Client) DeleteInstance(ctx context.Context) (*json.RawMessage, error) {
+	if c.instance == "" {
+		return nil, fmt.Errorf("instance is required")
+	}
+	p := "/instance/delete/" + url.PathEscape(c.instance)
+	req, err := c.newRequest(ctx, http.MethodDelete, p, nil)
+
+	q := req.URL.Query()
+	q.Set("force", "true")
+	req.URL.RawQuery = q.Encode()
+
+	if err != nil {
+		return nil, err
+	}
+	jr, _, err := c.do(req)
+	if err != nil {
+		return nil, err
+	}
+	return &jr, nil
+}

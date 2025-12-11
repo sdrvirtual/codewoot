@@ -184,9 +184,15 @@ func StatusSession(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 
 		q := db.New(p)
 		dbSession, err := q.GetSessionBySessionId(r.Context(), sessionUUID)
+		if err != nil && err.Error() == "no rows in result set" {
+			render.Status(r, http.StatusNotFound)
+			render.Render(w, r, dto.NewAPIErrorResponse("session not found", ""))
+			return
+		}
 		if err != nil {
 			render.Status(r, http.StatusBadRequest)
 			render.Render(w, r, dto.NewAPIErrorResponse("Error getting session", err.Error()))
+			return
 		}
 
 		sessionSvc, err := services.NewSessionService(
@@ -198,12 +204,14 @@ func StatusSession(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 		if err != nil {
 			render.Status(r, http.StatusBadRequest)
 			render.Render(w, r, dto.NewAPIErrorResponse("error creating service", err.Error()))
+			return
 		}
 
-		resp, err := sessionSvc.FetchInstance(dbSession.SessionID.String())
+		resp, err := sessionSvc.FetchInstance()
 		if err != nil {
 			render.Status(r, http.StatusBadRequest)
 			render.Render(w, r, dto.NewAPIErrorResponse("Error fetching instance", err.Error()))
+			return
 		}
 		render.Status(r, http.StatusOK)
 		render.Render(
@@ -211,5 +219,65 @@ func StatusSession(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 			r,
 			newStatusSessionResponse(cfg, dbSession, resp.ConnectionStatus),
 		)
+	}
+}
+
+func DeleteSession(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session := chi.URLParam(r, "session")
+
+		if session == "" {
+			render.Status(r, http.StatusBadRequest)
+			render.Render(w, r, dto.NewAPIErrorResponse("missing required path param", "session"))
+			return
+		}
+
+		var sessionUUID pgtype.UUID
+		err := sessionUUID.Scan(session)
+		if err != nil {
+			render.Status(r, http.StatusBadRequest)
+			render.Render(w, r, dto.NewAPIErrorResponse("session is not a uuid", err.Error()))
+			return
+		}
+
+		q := db.New(p)
+		dbSession, err := q.GetSessionBySessionId(r.Context(), sessionUUID)
+		if err != nil && err.Error() == "no rows in result set" {
+			render.Status(r, http.StatusNotFound)
+			render.Render(w, r, dto.NewAPIErrorResponse("session not found", ""))
+			return
+		}
+		if err != nil {
+			render.Status(r, http.StatusBadRequest)
+			render.Render(w, r, dto.NewAPIErrorResponse("Error getting session", err.Error()))
+			return
+		}
+
+		sessionSvc, err := services.NewSessionService(
+			r.Context(),
+			cfg,
+			p,
+			services.WithInstance(dbSession.CodechatInstcanceToken, dbSession.CodechatInstance),
+		)
+		if err != nil {
+			render.Status(r, http.StatusBadRequest)
+			render.Render(w, r, dto.NewAPIErrorResponse("error creating service", err.Error()))
+			return
+		}
+
+		err = sessionSvc.DeleteInstance()
+		if err != nil {
+			render.Status(r, http.StatusBadRequest)
+			render.Render(w, r, dto.NewAPIErrorResponse("Error deleting instance", err.Error()))
+			return
+		}
+
+		err = q.DeleteSessionBySessionId(r.Context(), sessionUUID)
+		if err != nil {
+			render.Status(r, http.StatusBadRequest)
+			render.Render(w, r, dto.NewAPIErrorResponse("Error deleting instance", err.Error()))
+			return
+		}
+		render.Status(r, http.StatusNoContent)
 	}
 }
