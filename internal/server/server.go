@@ -65,7 +65,7 @@ func errorLogger(next http.Handler) http.Handler {
 		next.ServeHTTP(bw, r)
 
 		// Log only on error responses
-		if bw.status >= 400 {
+		if bw.status >= 400 && bw.status != 404 && bw.status != 401 {
 			log.Printf("ERROR RESPONSE: %s %s -> %d\nRequestBody: %s\nResponseBody: %s",
 				r.Method, r.URL.String(), bw.status, formatMaybeJSON(reqBody), formatMaybeJSON(bw.body.Bytes()))
 		}
@@ -96,6 +96,7 @@ func SessionRouter(cfg *config.Config, p *pgxpool.Pool) http.Handler {
 	r.Post("/", handlers.CreateSession(cfg, p))
 	r.Route("/{session}", func(r chi.Router) {
 		r.Get("/", handlers.StatusSession(cfg, p))
+		r.Delete("/", handlers.DeleteSession(cfg, p))
 		r.Post("/connect", handlers.ConnectSession(cfg, p))
 	})
 	return r

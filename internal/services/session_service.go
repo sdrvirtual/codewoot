@@ -118,7 +118,18 @@ func (s *SessionService) SetWebhook(instance string) error {
 	return err
 }
 
-func (s *SessionService) FetchInstance(instance string) (*codechat.FetchInstanceResponse, error) {
+func (s *SessionService) FetchInstance() (*codechat.FetchInstanceResponse, error) {
 	r, err := s.client.FetchInstance(*s.ctx)
 	return r, err
+}
+
+func (s *SessionService) DeleteInstance() error {
+	r, err := s.client.LogoutInstance(*s.ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("r: %v\n", r)
+	r, err = s.client.DeleteInstance(*s.ctx)
+	fmt.Printf("r: %v\n", r)
+	return err
 }
