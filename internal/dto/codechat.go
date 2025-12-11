@@ -104,6 +104,8 @@ func (c *CodechatData) UnmarshalJSON(data []byte) error {
 	}
 
 	switch c.MessageType {
+	case "protocolMessage":
+		// TODO: handle this
 	case "documentMessage":
 		var msg CodechatDocumentContent
 		if err := json.Unmarshal(aux.Content, &msg); err != nil {
