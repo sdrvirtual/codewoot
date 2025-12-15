@@ -52,6 +52,11 @@ func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 		return nil
 	}
 
+	if payload.Data.KeyRemoteJid == payload.Instance.OwnerJid {
+		// This should not happen, but it does ;(
+		return nil
+	}
+
 	// TODO: Handle deleting messages
 
 	phone, err := utils.ValidatePhone(strings.Split(payload.Data.KeyRemoteJid, "@")[0])
@@ -75,7 +80,6 @@ func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 		}
 		message.FileType = "audio"
 		message.Attachment = audioData
-	// TODO: Handle images and documents
 	case dto.CodechatImageContent:
 		return fmt.Errorf("received message with images")
 	}

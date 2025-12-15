@@ -124,12 +124,10 @@ func (s *SessionService) FetchInstance() (*codechat.FetchInstanceResponse, error
 }
 
 func (s *SessionService) DeleteInstance() error {
-	r, err := s.client.LogoutInstance(*s.ctx)
+	_, err := s.client.LogoutInstance(*s.ctx)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("r: %v\n", r)
-	r, err = s.client.DeleteInstance(*s.ctx)
-	fmt.Printf("r: %v\n", r)
+	_, err = s.client.DeleteInstance(*s.ctx)
 	return err
 }
