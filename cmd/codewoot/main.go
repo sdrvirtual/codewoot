@@ -18,7 +18,6 @@ import (
 
 func main() {
 
-
 	opts := &slog.HandlerOptions{
 		AddSource: true,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
