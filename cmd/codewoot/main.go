@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"log/slog"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,6 +17,23 @@ import (
 )
 
 func main() {
+
+
+	opts := &slog.HandlerOptions{
+		AddSource: true,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.SourceKey {
+				s := a.Value.Any().(*slog.Source)
+				s.File = filepath.Base(s.File)
+				return slog.Any(a.Key, s)
+			}
+			return a
+		},
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
+	slog.SetDefault(logger)
+
 	ctx := context.Background()
 	cfg, _ := config.Load()
 	dbCfg, err := pgxpool.ParseConfig(cfg.Database.URL)

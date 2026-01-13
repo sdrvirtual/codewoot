@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"sync"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,6 +23,9 @@ type RelayService struct {
 	codechat *CodechatService
 	chatwoot *ChatwootService
 	ctx      *context.Context
+
+	phoneMutexes map[string]*sync.Mutex
+	mapMutex     sync.Mutex
 }
 
 func NewRelayService(ctx context.Context, cfg *config.Config, p *pgxpool.Pool, session string) (*RelayService, error) {
@@ -40,11 +44,23 @@ func NewRelayService(ctx context.Context, cfg *config.Config, p *pgxpool.Pool, s
 	}
 
 	return &RelayService{
-		cfg:      cfg,
-		codechat: NewCodechatService(cfg, sessionObj),
-		chatwoot: NewChatwootService(cfg, sessionObj),
-		ctx:      &ctx,
+		cfg:          cfg,
+		codechat:     NewCodechatService(cfg, sessionObj),
+		chatwoot:     NewChatwootService(cfg, sessionObj),
+		ctx:          &ctx,
+		phoneMutexes: make(map[string]*sync.Mutex),
 	}, nil
+}
+
+func (r *RelayService) getPhoneMutex(phone string) *sync.Mutex {
+	r.mapMutex.Lock()
+	defer r.mapMutex.Unlock()
+
+	if _, exists := r.phoneMutexes[phone]; !exists {
+		r.phoneMutexes[phone] = &sync.Mutex{}
+	}
+
+	return r.phoneMutexes[phone]
 }
 
 func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
@@ -63,6 +79,11 @@ func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 	if err != nil {
 		return err
 	}
+
+	phoneMutex := r.getPhoneMutex(phone)
+	phoneMutex.Lock()
+	defer phoneMutex.Unlock()
+
 	contact := domain.ContactInfo{
 		Name:  payload.Data.PushName,
 		Phone: "+" + phone,
@@ -96,6 +117,11 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 	if err != nil {
 		return err
 	}
+
+	phoneMutex := r.getPhoneMutex(phone)
+	phoneMutex.Lock()
+	defer phoneMutex.Unlock()
+
 	contact := domain.ContactInfo{
 		Name:  payload.Conversation.Meta.Sender.Name,
 		Phone: phone,
