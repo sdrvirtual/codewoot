@@ -18,14 +18,16 @@ import (
 	"github.com/sdrvirtual/codewoot/internal/utils"
 )
 
+var (
+	globalPhoneMutexes = make(map[string]*sync.Mutex)
+	globalMapMutex     sync.Mutex
+)
+
 type RelayService struct {
 	cfg      *config.Config
 	codechat *CodechatService
 	chatwoot *ChatwootService
 	ctx      *context.Context
-
-	phoneMutexes map[string]*sync.Mutex
-	mapMutex     sync.Mutex
 }
 
 func NewRelayService(ctx context.Context, cfg *config.Config, p *pgxpool.Pool, session string) (*RelayService, error) {
@@ -44,23 +46,22 @@ func NewRelayService(ctx context.Context, cfg *config.Config, p *pgxpool.Pool, s
 	}
 
 	return &RelayService{
-		cfg:          cfg,
-		codechat:     NewCodechatService(cfg, sessionObj),
-		chatwoot:     NewChatwootService(cfg, sessionObj),
-		ctx:          &ctx,
-		phoneMutexes: make(map[string]*sync.Mutex),
+		cfg:      cfg,
+		codechat: NewCodechatService(cfg, sessionObj),
+		chatwoot: NewChatwootService(cfg, sessionObj),
+		ctx:      &ctx,
 	}, nil
 }
 
 func (r *RelayService) getPhoneMutex(phone string) *sync.Mutex {
-	r.mapMutex.Lock()
-	defer r.mapMutex.Unlock()
+	globalMapMutex.Lock()
+	defer globalMapMutex.Unlock()
 
-	if _, exists := r.phoneMutexes[phone]; !exists {
-		r.phoneMutexes[phone] = &sync.Mutex{}
+	if _, exists := globalPhoneMutexes[phone]; !exists {
+		globalPhoneMutexes[phone] = &sync.Mutex{}
 	}
 
-	return r.phoneMutexes[phone]
+	return globalPhoneMutexes[phone]
 }
 
 func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
