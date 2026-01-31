@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"io"
 	"log"
 	"strings"
 
@@ -37,7 +38,8 @@ type CodechatClientMessage struct {
 	PhoneNumber    string
 	AttachmentName *string
 	MediaURL       *string
-	AudioURL       *string
+	AudioFile      io.Reader
+	AudioFileName  *string
 	FileURL        *string
 }
 
@@ -50,14 +52,18 @@ func (c *CodechatService) GetAudioContent(ctx context.Context, message *dto.Code
 	if err != nil {
 		return nil, err
 	}
-	mp3Data, err := audio.TranscodeOggToMp3(data.File)
+	oggData, err := audio.TranscodeOggToMp3(data.File)
 	if err != nil {
 		return nil, err
 	}
-	data.File = mp3Data
-	data.Mimetype = "audio/mpeg"
-	data.Name = strings.Split(data.Name, ".")[0] + ".mp3"
+	data.File = oggData
+	data.Mimetype = "audio/ogg"
+	data.Name = strings.Split(data.Name, ".")[0] + ".ogg"
 	return data, nil
+}
+
+func (c *CodechatService) TranscodeAudioFromURL(ctx context.Context, url string) (io.Reader, error) {
+	return audio.DownloadAndTranscodeToOgg(ctx, url)
 }
 
 func (c *CodechatService) SendMessage(ctx context.Context, contact domain.ContactInfo, message CodechatClientMessage) error {
@@ -76,10 +82,15 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 		}
 		return nil
 	}
-	if message.AudioURL != nil {
+	if message.AudioFile != nil {
+		fileName := "audio.ogg"
+		if message.AudioFileName != nil {
+			fileName = *message.AudioFileName
+		}
 		params := codechat.SendWhatsappAudioParams{
-			Number:       contact.Phone,
-			AudioMessage: codechat.CCAudioMessage{Audio: *message.AudioURL},
+			Number:    contact.Phone,
+			AudioFile: message.AudioFile,
+			FileName:  fileName,
 		}
 		_, err := c.client.SendWhatsappAudio(ctx, params)
 		if err != nil {

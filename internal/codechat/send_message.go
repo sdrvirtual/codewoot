@@ -1,9 +1,12 @@
 package codechat
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 )
@@ -36,9 +39,9 @@ type SendTextParams struct {
 }
 
 type SendWhatsappAudioParams struct {
-	Number       string            `json:"number"`
-	Options      *CCMessageOptions `json:"options,omitempty"`
-	AudioMessage CCAudioMessage    `json:"audioMessage"`
+	Number    string
+	AudioFile io.Reader
+	FileName  string
 }
 
 type SendMediaParams struct {
@@ -65,7 +68,47 @@ func (c *Client) SendText(ctx context.Context, payload SendTextParams) (json.Raw
 }
 
 func (c *Client) SendWhatsappAudio(ctx context.Context, payload SendWhatsappAudioParams) (json.RawMessage, error) {
-	return c.messageRequest(ctx, "sendWhatsappAudio", payload)
+	if c.instance == "" {
+		return nil, fmt.Errorf("instanceName is required")
+	}
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+
+	if err := writer.WriteField("number", payload.Number); err != nil {
+		return nil, fmt.Errorf("failed to write number field: %w", err)
+	}
+
+	part, err := writer.CreateFormFile("attachment", payload.FileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create form file: %w", err)
+	}
+
+	if _, err := io.Copy(part, payload.AudioFile); err != nil {
+		return nil, fmt.Errorf("failed to copy audio file: %w", err)
+	}
+
+	contentType := writer.FormDataContentType()
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close writer: %w", err)
+	}
+
+	u := *c.baseURL
+	u.Path = fmt.Sprintf("%s/message/sendWhatsappAudioFile/%s", c.baseURL.Path, url.PathEscape(c.instance))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), &buf)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("apikey", c.globalToken)
+	if c.instanceToken != "" {
+		req.Header.Set("Authorization", c.instanceToken)
+	}
+
+	jr, _, err := c.do(req)
+	return jr, err
 }
 
 func (c *Client) SendMedia(ctx context.Context, payload SendMediaParams) (json.RawMessage, error) {

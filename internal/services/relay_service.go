@@ -140,7 +140,13 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 		for _, a := range m.Attachments {
 			switch a.FileType {
 			case "audio":
-				message.AudioURL = a.DataURL
+				oggFile, err := r.codechat.TranscodeAudioFromURL(*r.ctx, *a.DataURL)
+				if err != nil {
+					return fmt.Errorf("failed to transcode audio: %w", err)
+				}
+				fileName := "audio.ogg"
+				message.AudioFile = oggFile
+				message.AudioFileName = &fileName
 			case "image":
 				message.MediaURL = a.DataURL
 			case "file":
