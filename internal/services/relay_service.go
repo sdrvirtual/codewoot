@@ -103,7 +103,19 @@ func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 		message.FileType = "audio"
 		message.Attachment = audioData
 	case dto.CodechatImageContent:
-		return fmt.Errorf("received message with images")
+		imageData, err := r.codechat.GetMediaContent(*r.ctx, &payload.Data)
+		if err != nil {
+			return err
+		}
+		message.Text = content.Caption
+		message.Attachment = imageData
+	case dto.CodechatDocumentContent:
+		documentData, err := r.codechat.GetMediaContent(*r.ctx, &payload.Data)
+		if err != nil {
+			return err
+		}
+		message.Text = content.Caption
+		message.Attachment = documentData
 	}
 
 	return r.chatwoot.SendMessage(*r.ctx, contact, message)
