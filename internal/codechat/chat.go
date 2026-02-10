@@ -15,7 +15,7 @@ func (c *Client) GetMediaData(ctx context.Context, message *dto.CodechatData) (*
 		return nil, fmt.Errorf("instanceName is required")
 	}
 	p := fmt.Sprintf("/chat/mediaData/%s", url.PathEscape(c.instance))
-	req, err := c.newRequest(ctx, http.MethodPost, p, message)
+	req, err := c.newRequest(ctx, http.MethodPost, p, map[string]string{"keyId": message.KeyID})
 
 	q := req.URL.Query()
 	q.Set("binary", "true")

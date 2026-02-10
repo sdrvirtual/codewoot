@@ -65,7 +65,20 @@ type CodechatAudioContent struct {
 func (CodechatAudioContent) isCodechatMessageContent() {}
 
 type CodechatDocumentContent struct {
-	// TODO
+	Title             string `json:"title"`
+	Caption           string `json:"caption"`
+	DirectPath        string `json:"directPath"`
+	FileEncSha256     string `json:"fileEncSha256"`
+	FileLength        string `json:"fileLength"`
+	FileSha256        string `json:"fileSha256"`
+	Height            int    `json:"height"`
+	JpegThumbnail     string `json:"jpegThumbnail"`
+	MediaKey          string `json:"mediaKey"`
+	MediaKeyTimestamp string `json:"mediaKeyTimestamp"`
+	MimeType          string `json:"mimetype"`
+	URL               string `json:"url"`
+	ViewOnce          bool   `json:"viewOnce"`
+	Width             int    `json:"width"`
 }
 
 func (CodechatDocumentContent) isCodechatMessageContent() {}
@@ -106,39 +119,35 @@ func (c *CodechatData) UnmarshalJSON(data []byte) error {
 	switch c.MessageType {
 	case "protocolMessage":
 		// TODO: handle this
-	case "documentMessage":
-		var msg CodechatDocumentContent
-		if err := json.Unmarshal(aux.Content, &msg); err != nil {
-			return err
+	case "documentMessage", "documentWithCaptionMessage":
+		var raw struct {
+			Message struct {
+				DocumentMessage CodechatDocumentContent `json:"documentMessage"`
+			} `json:"message"`
 		}
-		c.Content = msg
-	case "conversation":
-		var msg CodechatTextContent
-		if err := json.Unmarshal(aux.Content, &msg); err != nil {
-			return err
-		}
-		c.Content = msg
-	case "extendedTextMessage":
-		var msg CodechatTextContent
-		if err := json.Unmarshal(aux.Content, &msg); err != nil {
-			return err
-		}
-		c.Content = msg
 
+		if err := json.Unmarshal(aux.Content, &raw); err != nil {
+			return err
+		}
+		c.Content = raw.Message.DocumentMessage
+	case "conversation", "extendedTextMessage":
+		var msg CodechatTextContent
+		if err := json.Unmarshal(aux.Content, &msg); err != nil {
+			return err
+		}
+		c.Content = msg
 	case "audioMessage":
 		var msg CodechatAudioContent
 		if err := json.Unmarshal(aux.Content, &msg); err != nil {
 			return err
 		}
 		c.Content = msg
-
 	case "imageMessage":
 		var msg CodechatImageContent
 		if err := json.Unmarshal(aux.Content, &msg); err != nil {
 			return err
 		}
 		c.Content = msg
-
 	default:
 		return fmt.Errorf("unknown message type: %s", c.MessageType)
 	}

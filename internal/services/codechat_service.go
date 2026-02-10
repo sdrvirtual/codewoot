@@ -47,6 +47,14 @@ func NewCodechatClientMessage() CodechatClientMessage {
 	return CodechatClientMessage{}
 }
 
+func (c *CodechatService) GetMediaContent(ctx context.Context, message *dto.CodechatData) (*dto.FileData, error) {
+	data, err := c.client.GetMediaData(ctx, message)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
 func (c *CodechatService) GetAudioContent(ctx context.Context, message *dto.CodechatData) (*dto.FileData, error) {
 	data, err := c.client.GetMediaData(ctx, message)
 	if err != nil {
