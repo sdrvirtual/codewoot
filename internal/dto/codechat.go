@@ -2,10 +2,86 @@
 package dto
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 )
+
+type CodechatBufferString string
+
+func (b *CodechatBufferString) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		*b = ""
+		return nil
+	}
+	if data[0] == '"' {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
+		}
+		*b = CodechatBufferString(s)
+		return nil
+	}
+	var obj struct {
+		Type string `json:"type"`
+		Data []byte `json:"data"`
+	}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+	if obj.Type != "" && obj.Type != "Buffer" {
+		return fmt.Errorf("unexpected buffer type: %s", obj.Type)
+	}
+	if len(obj.Data) == 0 {
+		*b = ""
+		return nil
+	}
+	*b = CodechatBufferString(base64.StdEncoding.EncodeToString(obj.Data))
+	return nil
+}
+
+type CodechatLongString string
+
+func (l *CodechatLongString) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		*l = ""
+		return nil
+	}
+	if data[0] == '"' {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
+		}
+		*l = CodechatLongString(s)
+		return nil
+	}
+	if (data[0] >= '0' && data[0] <= '9') || data[0] == '-' {
+		var n json.Number
+		if err := json.Unmarshal(data, &n); err != nil {
+			return err
+		}
+		*l = CodechatLongString(n.String())
+		return nil
+	}
+	var obj struct {
+		Low      uint32 `json:"low"`
+		High     uint32 `json:"high"`
+		Unsigned bool   `json:"unsigned"`
+	}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+	if obj.Unsigned {
+		v := (uint64(obj.High) << 32) | uint64(obj.Low)
+		*l = CodechatLongString(strconv.FormatUint(v, 10))
+		return nil
+	}
+	v := (int64(int32(obj.High)) << 32) | int64(obj.Low)
+	*l = CodechatLongString(strconv.FormatInt(v, 10))
+	return nil
+}
 
 type CodechatInstance struct {
 	ID                 int       `json:"id"`
@@ -30,55 +106,55 @@ type CodechatTextContent struct {
 func (CodechatTextContent) isCodechatMessageContent() {}
 
 type CodechatImageContent struct {
-	Caption           string `json:"caption"`
-	DirectPath        string `json:"directPath"`
-	FileEncSha256     string `json:"fileEncSha256"`
-	FileLength        string `json:"fileLength"`
-	FileSha256        string `json:"fileSha256"`
-	Height            int    `json:"height"`
-	JpegThumbnail     string `json:"jpegThumbnail"`
-	MediaKey          string `json:"mediaKey"`
-	MediaKeyTimestamp string `json:"mediaKeyTimestamp"`
-	MimeType          string `json:"mimetype"`
-	URL               string `json:"url"`
-	ViewOnce          bool   `json:"viewOnce"`
-	Width             int    `json:"width"`
+	Caption           string               `json:"caption"`
+	DirectPath        string               `json:"directPath"`
+	FileEncSha256     CodechatBufferString `json:"fileEncSha256"`
+	FileLength        CodechatLongString   `json:"fileLength"`
+	FileSha256        CodechatBufferString `json:"fileSha256"`
+	Height            int                  `json:"height"`
+	JpegThumbnail     CodechatBufferString `json:"jpegThumbnail"`
+	MediaKey          CodechatBufferString `json:"mediaKey"`
+	MediaKeyTimestamp CodechatLongString   `json:"mediaKeyTimestamp"`
+	MimeType          string               `json:"mimetype"`
+	URL               string               `json:"url"`
+	ViewOnce          bool                 `json:"viewOnce"`
+	Width             int                  `json:"width"`
 }
 
 func (CodechatImageContent) isCodechatMessageContent() {}
 
 type CodechatAudioContent struct {
-	DirectPath        string `json:"directPath"`
-	FileEncSha256     string `json:"fileEncSha256"`
-	FileLength        string `json:"fileLength"`
-	FileSha256        string `json:"fileSha256"`
-	MediaKey          string `json:"mediaKey"`
-	MediaKeyTimestamp string `json:"mediaKeyTimestamp"`
-	MimeType          string `json:"mimetype"`
-	Ptt               bool   `json:"ptt"`
-	Seconds           int    `json:"seconds"`
-	URL               string `json:"url"`
-	ViewOnce          bool   `json:"viewOnce"`
-	Waveform          string `json:"waveform"`
+	DirectPath        string               `json:"directPath"`
+	FileEncSha256     CodechatBufferString `json:"fileEncSha256"`
+	FileLength        CodechatLongString   `json:"fileLength"`
+	FileSha256        CodechatBufferString `json:"fileSha256"`
+	MediaKey          CodechatBufferString `json:"mediaKey"`
+	MediaKeyTimestamp CodechatLongString   `json:"mediaKeyTimestamp"`
+	MimeType          string               `json:"mimetype"`
+	Ptt               bool                 `json:"ptt"`
+	Seconds           int                  `json:"seconds"`
+	URL               string               `json:"url"`
+	ViewOnce          bool                 `json:"viewOnce"`
+	Waveform          CodechatBufferString `json:"waveform"`
 }
 
 func (CodechatAudioContent) isCodechatMessageContent() {}
 
 type CodechatDocumentContent struct {
-	Title             string `json:"title"`
-	Caption           string `json:"caption"`
-	DirectPath        string `json:"directPath"`
-	FileEncSha256     string `json:"fileEncSha256"`
-	FileLength        string `json:"fileLength"`
-	FileSha256        string `json:"fileSha256"`
-	Height            int    `json:"height"`
-	JpegThumbnail     string `json:"jpegThumbnail"`
-	MediaKey          string `json:"mediaKey"`
-	MediaKeyTimestamp string `json:"mediaKeyTimestamp"`
-	MimeType          string `json:"mimetype"`
-	URL               string `json:"url"`
-	ViewOnce          bool   `json:"viewOnce"`
-	Width             int    `json:"width"`
+	Title             string               `json:"title"`
+	Caption           string               `json:"caption"`
+	DirectPath        string               `json:"directPath"`
+	FileEncSha256     CodechatBufferString `json:"fileEncSha256"`
+	FileLength        CodechatLongString   `json:"fileLength"`
+	FileSha256        CodechatBufferString `json:"fileSha256"`
+	Height            int                  `json:"height"`
+	JpegThumbnail     CodechatBufferString `json:"jpegThumbnail"`
+	MediaKey          CodechatBufferString `json:"mediaKey"`
+	MediaKeyTimestamp CodechatLongString   `json:"mediaKeyTimestamp"`
+	MimeType          string               `json:"mimetype"`
+	URL               string               `json:"url"`
+	ViewOnce          bool                 `json:"viewOnce"`
+	Width             int                  `json:"width"`
 }
 
 func (CodechatDocumentContent) isCodechatMessageContent() {}
