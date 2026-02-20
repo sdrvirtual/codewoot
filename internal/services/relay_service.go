@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"path"
 	"strings"
@@ -116,6 +117,9 @@ func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 		}
 		message.Text = content.Caption
 		message.Attachment = documentData
+	case dto.CodechatVideoContent:
+		slog.Info("received codechat video message; not forwarding to chatwoot", "message_id", payload.Data.ID)
+		return nil
 	}
 
 	return r.chatwoot.SendMessage(*r.ctx, contact, message)
@@ -143,13 +147,27 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 	// TODO: Handle deleting messages
 
 	for _, m := range payload.Conversation.Messages {
-		message := NewCodechatClientMessage()
-
+		text := ""
 		if m.Content != nil {
-			message.Text = *m.Content
+			text = *m.Content
 		}
 
-		for _, a := range m.Attachments {
+		if len(m.Attachments) == 0 {
+			message := NewCodechatClientMessage()
+			message.Text = text
+			if err := r.codechat.SendMessage(*r.ctx, contact, message); err != nil {
+				return err
+			}
+			continue
+		}
+
+		for i, a := range m.Attachments {
+			message := NewCodechatClientMessage()
+			if i == 0 {
+				message.Text = text
+			}
+
+			hasAttachment := false
 			switch a.FileType {
 			case "audio":
 				oggFile, err := r.codechat.TranscodeAudioFromURL(*r.ctx, *a.DataURL)
@@ -159,8 +177,17 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 				fileName := "audio.ogg"
 				message.AudioFile = oggFile
 				message.AudioFileName = &fileName
+				hasAttachment = true
 			case "image":
 				message.MediaURL = a.DataURL
+				mediaType := "image"
+				message.MediaType = &mediaType
+				hasAttachment = true
+			case "video":
+				message.MediaURL = a.DataURL
+				mediaType := "video"
+				message.MediaType = &mediaType
+				hasAttachment = true
 			case "file":
 				message.FileURL = a.DataURL
 				u, err := url.Parse(*a.DataURL)
@@ -169,11 +196,15 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 				}
 				filename := path.Base(u.Path)
 				message.AttachmentName = &filename
+				hasAttachment = true
 			}
-		}
 
-		if err := r.codechat.SendMessage(*r.ctx, contact, message); err != nil {
-			return err
+			if !hasAttachment && message.Text == "" {
+				continue
+			}
+			if err := r.codechat.SendMessage(*r.ctx, contact, message); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

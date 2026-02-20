@@ -38,6 +38,7 @@ type CodechatClientMessage struct {
 	PhoneNumber    string
 	AttachmentName *string
 	MediaURL       *string
+	MediaType      *string
 	AudioFile      io.Reader
 	AudioFileName  *string
 	FileURL        *string
@@ -76,11 +77,15 @@ func (c *CodechatService) TranscodeAudioFromURL(ctx context.Context, url string)
 
 func (c *CodechatService) SendMessage(ctx context.Context, contact domain.ContactInfo, message CodechatClientMessage) error {
 	if message.MediaURL != nil {
+		mediaType := "image"
+		if message.MediaType != nil && *message.MediaType != "" {
+			mediaType = *message.MediaType
+		}
 		params := codechat.SendMediaParams{
 			Number: contact.Phone,
 			MediaMessage: codechat.CCMediaMessage{
 				Media:     *message.MediaURL,
-				Mediatype: "image",
+				Mediatype: mediaType,
 				Caption:   message.Text,
 			},
 		}

@@ -159,6 +159,24 @@ type CodechatDocumentContent struct {
 
 func (CodechatDocumentContent) isCodechatMessageContent() {}
 
+type CodechatVideoContent struct {
+	Caption           string               `json:"caption"`
+	DirectPath        string               `json:"directPath"`
+	FileEncSha256     CodechatBufferString `json:"fileEncSha256"`
+	FileLength        CodechatLongString   `json:"fileLength"`
+	FileSha256        CodechatBufferString `json:"fileSha256"`
+	Height            int                  `json:"height"`
+	JpegThumbnail     CodechatBufferString `json:"jpegThumbnail"`
+	MediaKey          CodechatBufferString `json:"mediaKey"`
+	MediaKeyTimestamp CodechatLongString   `json:"mediaKeyTimestamp"`
+	MimeType          string               `json:"mimetype"`
+	URL               string               `json:"url"`
+	ViewOnce          bool                 `json:"viewOnce"`
+	Width             int                  `json:"width"`
+}
+
+func (CodechatVideoContent) isCodechatMessageContent() {}
+
 type CodechatData struct {
 	ID               int                    `json:"id"`
 	KeyID            string                 `json:"keyId"`
@@ -224,6 +242,16 @@ func (c *CodechatData) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		c.Content = msg
+	case "videoMessage":
+		var raw struct {
+			Message struct {
+				VideoMessage CodechatVideoContent `json:"videoMessage"`
+			} `json:"message"`
+		}
+		if err := json.Unmarshal(aux.Content, &raw); err != nil {
+			return err
+		}
+		c.Content = raw.Message.VideoMessage
 	default:
 		return fmt.Errorf("unknown message type: %s", c.MessageType)
 	}
