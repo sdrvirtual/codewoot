@@ -119,7 +119,7 @@ JSON payload shape (from `internal/dto/session.go`):
 - Codechat
   - [x] Support text messages
   - [x] Support audio messages
-  - [ ] Support media messages
+  - [ ] Support media messages (partial: video parsed but not forwarded)
   - [ ] Support document messages
   - [ ] Support pools
   - [ ] Support contact messages
