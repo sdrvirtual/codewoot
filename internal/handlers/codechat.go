@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -35,18 +37,31 @@ func CodechatWebhook(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
+		// Validate the session synchronously so we can return 400 for
+		// unknown sessions (this is a fast DB lookup).
 		relay, err := services.NewRelayService(r.Context(), cfg, p, session)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		if err := relay.FromCodechat(payload); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
+		// Respond immediately and relay asynchronously to avoid the
+		// caller timing out during slow media operations.
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
+
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), relayTimeout)
+			defer cancel()
+
+			relay.SetContext(ctx)
+
+			if err := relay.FromCodechat(payload); err != nil {
+				slog.Error("async relay from codechat failed",
+					"session", session,
+					"error", err.Error(),
+				)
+			}
+		}()
 	}
 }
