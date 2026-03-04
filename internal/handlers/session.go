@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -267,9 +269,19 @@ func DeleteSession(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 
 		err = sessionSvc.DeleteInstance()
 		if err != nil {
-			render.Status(r, http.StatusBadRequest)
-			render.Render(w, r, dto.NewAPIErrorResponse("Error deleting instance", err.Error()))
-			return
+			errMsg := err.Error()
+			// If the instance no longer exists in CodeChat, that's fine —
+			// clean up the local record anyway to avoid stale sessions that
+			// can never be deleted.
+			if !strings.Contains(errMsg, "does not exist") && !strings.Contains(errMsg, "Not Found") {
+				render.Status(r, http.StatusBadRequest)
+				render.Render(w, r, dto.NewAPIErrorResponse("Error deleting instance", errMsg))
+				return
+			}
+			slog.Warn("codechat instance already gone, cleaning up local session",
+				"session", session,
+				"error", errMsg,
+			)
 		}
 
 		err = q.DeleteSessionBySessionId(r.Context(), sessionUUID)
