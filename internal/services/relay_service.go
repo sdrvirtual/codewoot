@@ -54,6 +54,14 @@ func NewRelayService(ctx context.Context, cfg *config.Config, p *pgxpool.Pool, s
 	}, nil
 }
 
+// SetContext replaces the context used by subsequent relay operations.
+// This allows handlers to decouple the relay work from the inbound HTTP
+// request lifetime, preventing "context canceled" errors when the webhook
+// caller times out before the relay finishes.
+func (r *RelayService) SetContext(ctx context.Context) {
+	r.ctx = &ctx
+}
+
 func (r *RelayService) getPhoneMutex(phone string) *sync.Mutex {
 	globalMapMutex.Lock()
 	defer globalMapMutex.Unlock()
