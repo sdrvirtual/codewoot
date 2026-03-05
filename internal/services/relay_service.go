@@ -128,6 +128,17 @@ func (r *RelayService) FromCodechat(payload dto.CodechatWebhook) error {
 	case dto.CodechatVideoContent:
 		slog.Info("received codechat video message; not forwarding to chatwoot", "message_id", payload.Data.ID)
 		return nil
+	case dto.CodechatUnsupportedContent:
+		slog.Warn("received unsupported codechat message; not forwarding to chatwoot",
+			"message_type", content.Type,
+			"message_id", payload.Data.ID,
+			"phone", payload.Data.KeyRemoteJid,
+			"push_name", payload.Data.PushName,
+			"instance", payload.Instance.Name,
+			"timestamp", payload.Data.MessageTimestamp,
+			"raw_content", content.RawContent,
+		)
+		return nil
 	}
 
 	return r.chatwoot.SendMessage(*r.ctx, contact, message)

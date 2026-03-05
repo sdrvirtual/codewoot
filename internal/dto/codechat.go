@@ -177,6 +177,17 @@ type CodechatVideoContent struct {
 
 func (CodechatVideoContent) isCodechatMessageContent() {}
 
+// CodechatUnsupportedContent holds the raw payload of message types that
+// the relay does not yet handle.  Instead of rejecting the whole webhook
+// with an error, we keep the data so the relay layer can log it with full
+// context (phone, push name, session, etc.) for later analysis.
+type CodechatUnsupportedContent struct {
+	Type       string `json:"-"` // original messageType value
+	RawContent string `json:"-"` // raw JSON of the content field
+}
+
+func (CodechatUnsupportedContent) isCodechatMessageContent() {}
+
 type CodechatData struct {
 	ID               int                    `json:"id"`
 	KeyID            string                 `json:"keyId"`
@@ -253,7 +264,10 @@ func (c *CodechatData) UnmarshalJSON(data []byte) error {
 		}
 		c.Content = raw.Message.VideoMessage
 	default:
-		return fmt.Errorf("unknown message type: %s", c.MessageType)
+		c.Content = CodechatUnsupportedContent{
+			Type:       c.MessageType,
+			RawContent: string(aux.Content),
+		}
 	}
 
 	return nil
