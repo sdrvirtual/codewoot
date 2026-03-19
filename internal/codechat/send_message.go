@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"net/url"
 )
 
@@ -79,7 +80,13 @@ func (c *Client) SendWhatsappAudio(ctx context.Context, payload SendWhatsappAudi
 		return nil, fmt.Errorf("failed to write number field: %w", err)
 	}
 
-	part, err := writer.CreateFormFile("attachment", payload.FileName)
+	// Use CreatePart with explicit Content-Type instead of CreateFormFile
+	// (which defaults to application/octet-stream). WhatsApp on iPhone
+	// requires the audio to be correctly identified as OGG/Opus.
+	partHeader := make(textproto.MIMEHeader)
+	partHeader.Set("Content-Disposition", fmt.Sprintf(`form-data; name="attachment"; filename="%s"`, payload.FileName))
+	partHeader.Set("Content-Type", "audio/ogg; codecs=opus")
+	part, err := writer.CreatePart(partHeader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create form file: %w", err)
 	}

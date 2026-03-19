@@ -10,6 +10,9 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
+// TranscodeOggToMp3 re-encodes audio to OGG/Opus with WhatsApp-compatible
+// parameters (mono, 48 kHz). The function name is historical; it actually
+// produces OGG/Opus output — not MP3.
 func TranscodeOggToMp3(oggfile io.Reader) (io.Reader, error) {
 	var out bytes.Buffer
 
@@ -19,6 +22,8 @@ func TranscodeOggToMp3(oggfile io.Reader) (io.Reader, error) {
 			"f":   "ogg",
 			"c:a": "libopus",
 			"b:a": "128k",
+			"ac":  "1",
+			"ar":  "48000",
 		}).
 		WithInput(oggfile).
 		WithOutput(&out).
@@ -31,6 +36,9 @@ func TranscodeOggToMp3(oggfile io.Reader) (io.Reader, error) {
 	return &out, nil
 }
 
+// TranscodeToOgg converts any audio input to OGG/Opus with parameters that
+// are compatible with WhatsApp voice notes on all devices including iPhone:
+// mono channel, 48 kHz sample rate, Opus codec.
 func TranscodeToOgg(audiofile io.Reader) (io.Reader, error) {
 	var out bytes.Buffer
 
@@ -40,6 +48,8 @@ func TranscodeToOgg(audiofile io.Reader) (io.Reader, error) {
 			"f":   "ogg",
 			"c:a": "libopus",
 			"b:a": "128k",
+			"ac":  "1",
+			"ar":  "48000",
 		}).
 		WithInput(audiofile).
 		WithOutput(&out).
