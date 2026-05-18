@@ -213,3 +213,104 @@ func TestSendWhatsappAudio_URL(t *testing.T) {
 		t.Errorf("expected URL path %q, got %q", expected, capturedURL)
 	}
 }
+
+func TestSendMediaFile_MultipartFields(t *testing.T) {
+	mediaData := []byte("fake-jpeg-data")
+
+	var capturedBody []byte
+	var capturedContentType string
+	var capturedURL string
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.Path
+		capturedContentType = r.Header.Get("Content-Type")
+		body, _ := io.ReadAll(r.Body)
+		capturedBody = body
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer ts.Close()
+
+	client, err := New(ts.URL, "token", WithInstanceToken("itok", "inst"))
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	params := SendMediaFileParams{
+		Number:    "5511999999999",
+		MediaType: "image",
+		Caption:   "hello",
+		File:      bytes.NewReader(mediaData),
+		FileName:  "media.jpg",
+		MimeType:  "image/jpeg",
+	}
+
+	_, err = client.SendMediaFile(t.Context(), params)
+	if err != nil {
+		t.Fatalf("SendMediaFile returned error: %v", err)
+	}
+
+	if capturedURL != "/message/sendMediaFile/inst" {
+		t.Fatalf("expected sendMediaFile URL, got %q", capturedURL)
+	}
+
+	mediaType, params2, err := mime.ParseMediaType(capturedContentType)
+	if err != nil {
+		t.Fatalf("failed to parse Content-Type header: %v", err)
+	}
+	if mediaType != "multipart/form-data" {
+		t.Fatalf("expected multipart/form-data, got %s", mediaType)
+	}
+
+	reader := multipart.NewReader(bytes.NewReader(capturedBody), params2["boundary"])
+	found := map[string]bool{}
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("error reading multipart part: %v", err)
+		}
+
+		switch part.FormName() {
+		case "number":
+			body, _ := io.ReadAll(part)
+			if string(body) != params.Number {
+				t.Fatalf("expected number %q, got %q", params.Number, string(body))
+			}
+			found["number"] = true
+		case "mediatype":
+			body, _ := io.ReadAll(part)
+			if string(body) != params.MediaType {
+				t.Fatalf("expected mediatype %q, got %q", params.MediaType, string(body))
+			}
+			found["mediatype"] = true
+		case "caption":
+			body, _ := io.ReadAll(part)
+			if string(body) != params.Caption {
+				t.Fatalf("expected caption %q, got %q", params.Caption, string(body))
+			}
+			found["caption"] = true
+		case "attachment":
+			if part.FileName() != params.FileName {
+				t.Fatalf("expected filename %q, got %q", params.FileName, part.FileName())
+			}
+			if part.Header.Get("Content-Type") != params.MimeType {
+				t.Fatalf("expected attachment Content-Type %q, got %q", params.MimeType, part.Header.Get("Content-Type"))
+			}
+			body, _ := io.ReadAll(part)
+			if !bytes.Equal(body, mediaData) {
+				t.Fatalf("attachment body mismatch")
+			}
+			found["attachment"] = true
+		}
+	}
+
+	for _, name := range []string{"number", "mediatype", "caption", "attachment"} {
+		if !found[name] {
+			t.Fatalf("multipart field %q not found", name)
+		}
+	}
+}

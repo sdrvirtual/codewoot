@@ -45,6 +45,15 @@ type SendWhatsappAudioParams struct {
 	FileName  string
 }
 
+type SendMediaFileParams struct {
+	Number    string
+	MediaType string
+	Caption   string
+	File      io.Reader
+	FileName  string
+	MimeType  string
+}
+
 type SendMediaParams struct {
 	Number       string            `json:"number"`
 	Options      *CCMessageOptions `json:"options,omitempty"`
@@ -102,6 +111,61 @@ func (c *Client) SendWhatsappAudio(ctx context.Context, payload SendWhatsappAudi
 
 	u := *c.baseURL
 	u.Path = fmt.Sprintf("%s/message/sendWhatsappAudioFile/%s", c.baseURL.Path, url.PathEscape(c.instance))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), &buf)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("apikey", c.globalToken)
+	if c.instanceToken != "" {
+		req.Header.Set("Authorization", c.instanceToken)
+	}
+
+	jr, _, err := c.do(req)
+	return jr, err
+}
+
+func (c *Client) SendMediaFile(ctx context.Context, payload SendMediaFileParams) (json.RawMessage, error) {
+	if c.instance == "" {
+		return nil, fmt.Errorf("instanceName is required")
+	}
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+
+	if err := writer.WriteField("number", payload.Number); err != nil {
+		return nil, fmt.Errorf("failed to write number field: %w", err)
+	}
+	if err := writer.WriteField("mediatype", payload.MediaType); err != nil {
+		return nil, fmt.Errorf("failed to write mediatype field: %w", err)
+	}
+	if payload.Caption != "" {
+		if err := writer.WriteField("caption", payload.Caption); err != nil {
+			return nil, fmt.Errorf("failed to write caption field: %w", err)
+		}
+	}
+
+	partHeader := make(textproto.MIMEHeader)
+	partHeader.Set("Content-Disposition", fmt.Sprintf(`form-data; name="attachment"; filename="%s"`, payload.FileName))
+	partHeader.Set("Content-Type", payload.MimeType)
+	part, err := writer.CreatePart(partHeader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create form file: %w", err)
+	}
+
+	if _, err := io.Copy(part, payload.File); err != nil {
+		return nil, fmt.Errorf("failed to copy media file: %w", err)
+	}
+
+	contentType := writer.FormDataContentType()
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close writer: %w", err)
+	}
+
+	u := *c.baseURL
+	u.Path = fmt.Sprintf("%s/message/sendMediaFile/%s", c.baseURL.Path, url.PathEscape(c.instance))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), &buf)
 	if err != nil {
