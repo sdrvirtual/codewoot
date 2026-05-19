@@ -12,6 +12,7 @@ import (
 	"github.com/sdrvirtual/codewoot/internal/db"
 	"github.com/sdrvirtual/codewoot/internal/domain"
 	"github.com/sdrvirtual/codewoot/internal/dto"
+	"github.com/sdrvirtual/codewoot/internal/media"
 )
 
 type CodechatService struct {
@@ -39,6 +40,9 @@ type CodechatClientMessage struct {
 	AttachmentName *string
 	MediaURL       *string
 	MediaType      *string
+	MediaFile      io.Reader
+	MediaFileName  *string
+	MediaMimeType  *string
 	AudioFile      io.Reader
 	AudioFileName  *string
 	FileURL        *string
@@ -75,7 +79,47 @@ func (c *CodechatService) TranscodeAudioFromURL(ctx context.Context, url string)
 	return audio.DownloadAndTranscodeToOgg(ctx, url)
 }
 
+func (c *CodechatService) PrepareImageFromURL(ctx context.Context, url string) (*media.PreparedMedia, error) {
+	return media.PrepareImageFromURL(ctx, url)
+}
+
+func (c *CodechatService) PrepareVideoFromURL(ctx context.Context, url string) (*media.PreparedMedia, error) {
+	return media.PrepareVideoFromURL(ctx, url)
+}
+
 func (c *CodechatService) SendMessage(ctx context.Context, contact domain.ContactInfo, message CodechatClientMessage) error {
+	if message.MediaFile != nil {
+		if closer, ok := message.MediaFile.(io.Closer); ok {
+			defer closer.Close()
+		}
+
+		mediaType := "image"
+		if message.MediaType != nil && *message.MediaType != "" {
+			mediaType = *message.MediaType
+		}
+		fileName := "media"
+		if message.MediaFileName != nil && *message.MediaFileName != "" {
+			fileName = *message.MediaFileName
+		}
+		mimeType := "application/octet-stream"
+		if message.MediaMimeType != nil && *message.MediaMimeType != "" {
+			mimeType = *message.MediaMimeType
+		}
+		params := codechat.SendMediaFileParams{
+			Number:    contact.Phone,
+			MediaType: mediaType,
+			Caption:   message.Text,
+			File:      message.MediaFile,
+			FileName:  fileName,
+			MimeType:  mimeType,
+		}
+		_, err := c.client.SendMediaFile(ctx, params)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
 	if message.MediaURL != nil {
 		mediaType := "image"
 		if message.MediaType != nil && *message.MediaType != "" {

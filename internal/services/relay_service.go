@@ -198,14 +198,38 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 				message.AudioFileName = &fileName
 				hasAttachment = true
 			case "image":
-				message.MediaURL = a.DataURL
 				mediaType := "image"
 				message.MediaType = &mediaType
+				prepared, err := r.codechat.PrepareImageFromURL(*r.ctx, *a.DataURL)
+				if err != nil {
+					return fmt.Errorf("failed to prepare image media: %w", err)
+				}
+				if prepared.UseURL {
+					slog.Info("sending image media by URL", "attachment_id", a.ID, "mime_type", prepared.MimeType)
+					message.MediaURL = a.DataURL
+				} else {
+					slog.Info("sending normalized image media by file", "attachment_id", a.ID, "mime_type", prepared.MimeType)
+					message.MediaFile = prepared.File
+					message.MediaFileName = &prepared.FileName
+					message.MediaMimeType = &prepared.MimeType
+				}
 				hasAttachment = true
 			case "video":
-				message.MediaURL = a.DataURL
 				mediaType := "video"
 				message.MediaType = &mediaType
+				prepared, err := r.codechat.PrepareVideoFromURL(*r.ctx, *a.DataURL)
+				if err != nil {
+					return fmt.Errorf("failed to prepare video media: %w", err)
+				}
+				if prepared.UseURL {
+					slog.Info("sending video media by URL", "attachment_id", a.ID, "mime_type", prepared.MimeType)
+					message.MediaURL = a.DataURL
+				} else {
+					slog.Info("sending normalized video media by file", "attachment_id", a.ID, "mime_type", prepared.MimeType)
+					message.MediaFile = prepared.File
+					message.MediaFileName = &prepared.FileName
+					message.MediaMimeType = &prepared.MimeType
+				}
 				hasAttachment = true
 			case "file":
 				message.FileURL = a.DataURL
