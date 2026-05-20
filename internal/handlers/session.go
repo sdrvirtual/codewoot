@@ -62,6 +62,11 @@ func newConnectSessionResponse(base64 string) *ConnectSessionResponse {
 	}
 }
 
+func isCodechatNotFoundError(errMsg string) bool {
+	errMsg = strings.ToLower(errMsg)
+	return strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "does not exist")
+}
+
 func CreateSession(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 2<<20) // 2MB
@@ -245,8 +250,33 @@ func DeleteSession(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 		q := db.New(p)
 		dbSession, err := q.GetSessionBySessionId(r.Context(), sessionUUID)
 		if err != nil && err.Error() == "no rows in result set" {
-			render.Status(r, http.StatusNotFound)
-			render.Render(w, r, dto.NewAPIErrorResponse("session not found", ""))
+			sessionSvc, err := services.NewSessionService(r.Context(), cfg, p)
+			if err != nil {
+				render.Status(r, http.StatusBadRequest)
+				render.Render(w, r, dto.NewAPIErrorResponse("error creating service", err.Error()))
+				return
+			}
+
+			err = sessionSvc.DeleteInstanceByName(session)
+			if err != nil {
+				errMsg := err.Error()
+				if !isCodechatNotFoundError(errMsg) {
+					render.Status(r, http.StatusBadRequest)
+					render.Render(w, r, dto.NewAPIErrorResponse("Error deleting instance", errMsg))
+					return
+				}
+				slog.Warn("codechat instance already gone, delete is idempotent",
+					"session", session,
+					"error", errMsg,
+				)
+			}
+			if err = sessionSvc.DeleteInstanceFiles(session); err != nil {
+				render.Status(r, http.StatusBadRequest)
+				render.Render(w, r, dto.NewAPIErrorResponse("Error deleting instance files", err.Error()))
+				return
+			}
+
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		if err != nil {
@@ -273,7 +303,7 @@ func DeleteSession(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 			// If the instance no longer exists in CodeChat, that's fine —
 			// clean up the local record anyway to avoid stale sessions that
 			// can never be deleted.
-			if !strings.Contains(errMsg, "does not exist") && !strings.Contains(errMsg, "Not Found") {
+			if !isCodechatNotFoundError(errMsg) {
 				render.Status(r, http.StatusBadRequest)
 				render.Render(w, r, dto.NewAPIErrorResponse("Error deleting instance", errMsg))
 				return
@@ -283,6 +313,11 @@ func DeleteSession(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 				"error", errMsg,
 			)
 		}
+		if err = sessionSvc.DeleteInstanceFiles(dbSession.CodechatInstance); err != nil {
+			render.Status(r, http.StatusBadRequest)
+			render.Render(w, r, dto.NewAPIErrorResponse("Error deleting instance files", err.Error()))
+			return
+		}
 
 		err = q.DeleteSessionBySessionId(r.Context(), sessionUUID)
 		if err != nil {
@@ -290,6 +325,6 @@ func DeleteSession(cfg *config.Config, p *pgxpool.Pool) http.HandlerFunc {
 			render.Render(w, r, dto.NewAPIErrorResponse("Error deleting instance", err.Error()))
 			return
 		}
-		render.Status(r, http.StatusNoContent)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

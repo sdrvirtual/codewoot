@@ -18,8 +18,9 @@ type Config struct {
 	}
 
 	Codechat struct {
-		URL         string
-		GlobalToken string
+		URL          string
+		GlobalToken  string
+		InstancesDir string
 	}
 
 	Database struct {
@@ -43,6 +44,7 @@ func Load() (*Config, error) {
 
 	cfg.Codechat.URL = os.Getenv("CODECHAT_URL")
 	cfg.Codechat.GlobalToken = os.Getenv("CODECHAT_KEY")
+	cfg.Codechat.InstancesDir = os.Getenv("CODECHAT_INSTANCES_DIR")
 
 	cfg.Database.URL = os.Getenv("DB_URL")
 	cfg.Authorization.Key = os.Getenv("API_KEY")
