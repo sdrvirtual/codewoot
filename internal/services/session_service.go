@@ -124,10 +124,17 @@ func (s *SessionService) FetchInstance() (*codechat.FetchInstanceResponse, error
 }
 
 func (s *SessionService) DeleteInstance() error {
-	_, err := s.client.LogoutInstance(*s.ctx)
-	if err != nil {
-		return err
-	}
-	_, err = s.client.DeleteInstance(*s.ctx)
+	// Logout can fail for already-offline instances; force delete must still run.
+	_, _ = s.client.LogoutInstance(*s.ctx)
+	_, deleteErr := s.client.DeleteInstance(*s.ctx)
+	return deleteErr
+}
+
+func (s *SessionService) DeleteInstanceByName(instance string) error {
+	_, err := s.client.DeleteInstanceByName(*s.ctx, instance)
 	return err
+}
+
+func (s *SessionService) DeleteInstanceFiles(instance string) error {
+	return removeInstanceFiles(s.cfg.Codechat.InstancesDir, instance)
 }

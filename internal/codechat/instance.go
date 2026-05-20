@@ -36,7 +36,13 @@ type FetchInstanceResponse struct {
 	CreatedAt          time.Time          `json:"createdAt"`
 	UpdatedAt          time.Time          `json:"updatedAt"`
 	ExternalAttributes string             `json:"externalAttributes"`
+	Auth               InstanceAuth       `json:"Auth,omitempty"`
 	Webhook            SetWebhookResponse `json:"Webhook,omitempty"`
+}
+
+type InstanceAuth struct {
+	ID    int    `json:"id"`
+	Token string `json:"token"`
 }
 
 type ConnectInstanceResponse struct {
@@ -81,6 +87,33 @@ func (c *Client) FetchInstance(ctx context.Context) (*FetchInstanceResponse, err
 	return &resp, nil
 }
 
+func (c *Client) FetchInstances(ctx context.Context) ([]FetchInstanceResponse, error) {
+	p := "/instance/fetchInstances"
+	req, err := c.newRequest(ctx, http.MethodGet, p, nil)
+	if err != nil {
+		return nil, err
+	}
+	jr, _, err := c.do(req)
+	if err != nil {
+		return nil, err
+	}
+	var resp []FetchInstanceResponse
+	if err := json.Unmarshal(jr, &resp); err == nil {
+		return resp, nil
+	}
+	var wrapped struct {
+		Instances []FetchInstanceResponse `json:"instances"`
+		Data      []FetchInstanceResponse `json:"data"`
+	}
+	if err := json.Unmarshal(jr, &wrapped); err != nil {
+		return nil, err
+	}
+	if wrapped.Instances != nil {
+		return wrapped.Instances, nil
+	}
+	return wrapped.Data, nil
+}
+
 func (c *Client) ConnectInstance(ctx context.Context) (*ConnectInstanceResponse, error) {
 	if c.instance == "" {
 		return nil, fmt.Errorf("instance is required")
@@ -123,14 +156,54 @@ func (c *Client) DeleteInstance(ctx context.Context) (*json.RawMessage, error) {
 	}
 	p := "/instance/delete/" + url.PathEscape(c.instance)
 	req, err := c.newRequest(ctx, http.MethodDelete, p, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	q.Set("force", "true")
+	req.URL.RawQuery = q.Encode()
+	jr, _, err := c.do(req)
+	if err != nil {
+		return nil, err
+	}
+	return &jr, nil
+}
+
+func (c *Client) DeleteInstanceByName(ctx context.Context, instance string) (*json.RawMessage, error) {
+	if instance == "" {
+		return nil, fmt.Errorf("instance is required")
+	}
+	instances, err := c.FetchInstances(ctx)
+	if err != nil {
+		return nil, err
+	}
+	instanceToken := ""
+	found := false
+	for _, i := range instances {
+		if i.Name == instance {
+			found = true
+			instanceToken = i.Auth.Token
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("instance not found")
+	}
+
+	p := "/instance/delete/" + url.PathEscape(instance)
+	req, err := c.newRequest(ctx, http.MethodDelete, p, nil)
+	if err != nil {
+		return nil, err
+	}
+	if instanceToken != "" {
+		req.Header.Set("Authorization", "Bearer "+instanceToken)
+	}
 
 	q := req.URL.Query()
 	q.Set("force", "true")
 	req.URL.RawQuery = q.Encode()
 
-	if err != nil {
-		return nil, err
-	}
 	jr, _, err := c.do(req)
 	if err != nil {
 		return nil, err
