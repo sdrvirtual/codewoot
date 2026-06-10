@@ -48,6 +48,13 @@ type CodechatClientMessage struct {
 	FileURL        *string
 }
 
+type CodechatRoute struct {
+	Number string
+	JID    string
+	LID    string
+	Exists bool
+}
+
 func NewCodechatClientMessage() CodechatClientMessage {
 	return CodechatClientMessage{}
 }
@@ -87,7 +94,32 @@ func (c *CodechatService) PrepareVideoFromURL(ctx context.Context, url string) (
 	return media.PrepareVideoFromURL(ctx, url)
 }
 
+func (c *CodechatService) ResolveRoutingNumber(ctx context.Context, phone string) (CodechatRoute, error) {
+	route := CodechatRoute{Number: phone}
+	numbers, err := c.client.WhatsappNumbers(ctx, []string{phone})
+	if err != nil {
+		return route, err
+	}
+	if len(numbers) == 0 {
+		return route, nil
+	}
+
+	resolved := numbers[0]
+	route.JID = strings.TrimSpace(resolved.JID)
+	route.LID = strings.TrimSpace(resolved.LID)
+	route.Exists = resolved.Exists
+	if isLidJID(route.LID) {
+		route.Number = route.LID
+	}
+	return route, nil
+}
+
 func (c *CodechatService) SendMessage(ctx context.Context, contact domain.ContactInfo, message CodechatClientMessage) error {
+	number := contact.Phone
+	if contact.RoutingJID != "" {
+		number = contact.RoutingJID
+	}
+
 	if message.MediaFile != nil {
 		if closer, ok := message.MediaFile.(io.Closer); ok {
 			defer closer.Close()
@@ -106,7 +138,7 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 			mimeType = *message.MediaMimeType
 		}
 		params := codechat.SendMediaFileParams{
-			Number:    contact.Phone,
+			Number:    number,
 			MediaType: mediaType,
 			Caption:   message.Text,
 			File:      message.MediaFile,
@@ -126,7 +158,7 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 			mediaType = *message.MediaType
 		}
 		params := codechat.SendMediaParams{
-			Number: contact.Phone,
+			Number: number,
 			MediaMessage: codechat.CCMediaMessage{
 				Media:     *message.MediaURL,
 				Mediatype: mediaType,
@@ -145,7 +177,7 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 			fileName = *message.AudioFileName
 		}
 		params := codechat.SendWhatsappAudioParams{
-			Number:    contact.Phone,
+			Number:    number,
 			AudioFile: message.AudioFile,
 			FileName:  fileName,
 		}
@@ -157,7 +189,7 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 	}
 	if message.FileURL != nil {
 		params := codechat.SendMediaParams{
-			Number: contact.Phone,
+			Number: number,
 			MediaMessage: codechat.CCMediaMessage{
 				Media:     *message.FileURL,
 				FileName:  *message.AttachmentName,
@@ -174,7 +206,7 @@ func (c *CodechatService) SendMessage(ctx context.Context, contact domain.Contac
 
 	if message.Text != "" && message.MediaURL == nil {
 		params := codechat.SendTextParams{
-			Number:      contact.Phone,
+			Number:      number,
 			TextMessage: codechat.CCTextMessage{Text: message.Text},
 		}
 		_, err := c.client.SendText(ctx, params)

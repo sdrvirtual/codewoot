@@ -189,17 +189,20 @@ type CodechatUnsupportedContent struct {
 func (CodechatUnsupportedContent) isCodechatMessageContent() {}
 
 type CodechatData struct {
-	ID               int                    `json:"id"`
-	KeyID            string                 `json:"keyId"`
-	KeyRemoteJid     string                 `json:"KeyRemoteJid"`
-	KeyFromMe        bool                   `json:"keyFromMe"`
-	PushName         string                 `json:"pushName"`
-	MessageType      string                 `json:"messageType"`
-	Content          CodechatMessageContent `json:"content"`
-	MessageTimestamp int                    `json:"messageTimestamp"`
-	InstanceID       int                    `json:"instanceId"`
-	Device           string                 `json:"device"`
-	IsGroup          bool                   `json:"isGroup"`
+	ID                int                    `json:"id"`
+	KeyID             string                 `json:"keyId"`
+	KeyRemoteJid      string                 `json:"keyRemoteJid"`
+	KeyLid            string                 `json:"keyLid"`
+	KeyParticipant    string                 `json:"keyParticipant"`
+	KeyParticipantLid string                 `json:"keyParticipantLid"`
+	KeyFromMe         bool                   `json:"keyFromMe"`
+	PushName          string                 `json:"pushName"`
+	MessageType       string                 `json:"messageType"`
+	Content           CodechatMessageContent `json:"content"`
+	MessageTimestamp  int                    `json:"messageTimestamp"`
+	InstanceID        int                    `json:"instanceId"`
+	Device            string                 `json:"device"`
+	IsGroup           bool                   `json:"isGroup"`
 }
 
 type CodechatWebhook struct {

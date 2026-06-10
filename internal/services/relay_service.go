@@ -54,6 +54,10 @@ func NewRelayService(ctx context.Context, cfg *config.Config, p *pgxpool.Pool, s
 	}, nil
 }
 
+func isLidJID(jid string) bool {
+	return strings.HasSuffix(strings.ToLower(strings.TrimSpace(jid)), "@lid")
+}
+
 // SetContext replaces the context used by subsequent relay operations.
 // This allows handlers to decouple the relay work from the inbound HTTP
 // request lifetime, preventing "context canceled" errors when the webhook
@@ -158,9 +162,27 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 	phoneMutex.Lock()
 	defer phoneMutex.Unlock()
 
+	routingJID := ""
+	route, err := r.codechat.ResolveRoutingNumber(*r.ctx, phone)
+	if err != nil {
+		slog.Warn("failed to resolve codechat routing number; falling back to phone",
+			"phone", phone,
+			"error", err.Error(),
+		)
+	} else if route.Number != phone {
+		routingJID = route.Number
+		slog.Info("resolved outbound whatsapp route",
+			"phone", phone,
+			"jid", route.JID,
+			"lid", route.LID,
+			"routing_number", route.Number,
+		)
+	}
+
 	contact := domain.ContactInfo{
-		Name:  payload.Conversation.Meta.Sender.Name,
-		Phone: phone,
+		Name:       payload.Conversation.Meta.Sender.Name,
+		Phone:      phone,
+		RoutingJID: routingJID,
 	}
 
 	// TODO: Handle deleting messages
