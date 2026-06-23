@@ -168,7 +168,7 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 	for _, m := range payload.Conversation.Messages {
 		text := ""
 		if m.Content != nil {
-			text = *m.Content
+			text = normalizeChatwootMarkdownLinksForCodechat(*m.Content)
 		}
 
 		if len(m.Attachments) == 0 {
