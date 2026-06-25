@@ -36,6 +36,11 @@ func TestNormalizeChatwootMarkdownLinksForCodechat(t *testing.T) {
 			want:  mapsURL,
 		},
 		{
+			name:  "mixed bold autolink becomes URL",
+			input: "<**" + mapsURL + ">**",
+			want:  mapsURL,
+		},
+		{
 			name:  "bold autolink in sentence becomes URL",
 			input: "Segue o endereco: **<" + mapsURL + ">** ",
 			want:  "Segue o endereco: " + mapsURL,

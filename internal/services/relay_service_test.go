@@ -35,6 +35,12 @@ func TestRelayServiceFromChatwoot_NormalizesProblematicMarkdownLinksForOutgoingM
 			want:       "Segue o endereco: " + mapsURL,
 		},
 		{
+			name:       "robot mixed bold autolink in sentence",
+			senderType: "AgentBot",
+			input:      "Segue o endereco: <**" + mapsURL + ">** ",
+			want:       "Segue o endereco: " + mapsURL,
+		},
+		{
 			name:       "robot bare bold link",
 			senderType: "AgentBot",
 			input:      "**" + mapsURL + "**",
@@ -151,7 +157,7 @@ func TestRelayServiceFromChatwoot_ContractImageCaptionToCodechat(t *testing.T) {
 
 	codechatSvc, requests := newCodechatServiceRecorder(t)
 	relay := newRelayServiceForCodechatTest(codechatSvc)
-	payload := mustDecodeChatwootWebhook(t, chatwootWebhookJSON("Imagem do local: **<"+mapsURL+">**", attachmentJSON))
+	payload := mustDecodeChatwootWebhook(t, chatwootWebhookJSON("Imagem do local: <**"+mapsURL+">**", attachmentJSON))
 
 	if err := relay.FromChatwoot(payload); err != nil {
 		t.Fatalf("FromChatwoot returned error: %v", err)
