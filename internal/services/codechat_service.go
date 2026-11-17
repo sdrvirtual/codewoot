@@ -79,6 +79,10 @@ func (c *CodechatService) TranscodeAudioFromURL(ctx context.Context, url string)
 	return audio.DownloadAndTranscodeToOgg(ctx, url)
 }
 
+func (c *CodechatService) WaitForMediaAvailability(ctx context.Context, url string) error {
+	return media.WaitUntilAvailable(ctx, url)
+}
+
 func (c *CodechatService) PrepareImageFromURL(ctx context.Context, url string) (*media.PreparedMedia, error) {
 	return media.PrepareImageFromURL(ctx, url)
 }
