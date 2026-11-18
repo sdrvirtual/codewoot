@@ -21,6 +21,97 @@ type PreparedMedia struct {
 	MimeType string
 }
 
+const (
+	availabilityAttempts     = 8
+	availabilityInitialDelay = 100 * time.Millisecond
+	availabilityMaxDelay     = time.Second
+)
+
+// WaitUntilAvailable waits until an attachment URL can be read before the URL
+// is handed to CodeChat. Chatwoot may emit message_created before ActiveStorage
+// finishes uploading the object, so an immediate CodeChat fetch can see a
+// transient 404/NoSuchKey.
+func WaitUntilAvailable(ctx context.Context, rawURL string) error {
+	return waitUntilAvailable(
+		ctx,
+		rawURL,
+		availabilityAttempts,
+		availabilityInitialDelay,
+		availabilityMaxDelay,
+	)
+}
+
+func waitUntilAvailable(ctx context.Context, rawURL string, attempts int, initialDelay, maxDelay time.Duration) error {
+	if attempts < 1 {
+		attempts = 1
+	}
+	delay := initialDelay
+	var lastErr error
+
+	for attempt := 1; attempt <= attempts; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create attachment availability request: %w", err)
+		}
+		// ActiveStorage redirects to a presigned GET URL, so HEAD can be rejected
+		// with 403 even when the object exists. A one-byte range validates the
+		// actual object while avoiding a full document download.
+		req.Header.Set("Range", "bytes=0-0")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil {
+			if resp.Body != nil {
+				resp.Body.Close()
+			}
+			if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
+				return nil
+			}
+			lastErr = fmt.Errorf("attachment probe returned status %d", resp.StatusCode)
+			if !isTransientAvailabilityStatus(resp.StatusCode) {
+				return lastErr
+			}
+		} else {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			lastErr = fmt.Errorf("attachment probe failed: %w", err)
+		}
+
+		if attempt == attempts {
+			break
+		}
+		if err := waitForAvailabilityRetry(ctx, delay); err != nil {
+			return err
+		}
+		delay *= 2
+		if delay > maxDelay {
+			delay = maxDelay
+		}
+	}
+
+	return fmt.Errorf("attachment unavailable after %d attempts: %w", attempts, lastErr)
+}
+
+func isTransientAvailabilityStatus(status int) bool {
+	return status == http.StatusNotFound || status == http.StatusRequestTimeout || status == http.StatusTooEarly ||
+		status == http.StatusTooManyRequests || status >= http.StatusInternalServerError
+}
+
+func waitForAvailabilityRetry(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
 func PrepareImageFromURL(ctx context.Context, rawURL string) (*PreparedMedia, error) {
 	mimeType, err := probeContentType(ctx, rawURL)
 	if err != nil {

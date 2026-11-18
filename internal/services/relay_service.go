@@ -232,6 +232,9 @@ func (r *RelayService) FromChatwoot(payload dto.ChatwootWebhook) error {
 				}
 				hasAttachment = true
 			case "file":
+				if err := r.codechat.WaitForMediaAvailability(*r.ctx, *a.DataURL); err != nil {
+					return fmt.Errorf("document attachment %d unavailable: %w", a.ID, err)
+				}
 				message.FileURL = a.DataURL
 				u, err := url.Parse(*a.DataURL)
 				if err != nil {

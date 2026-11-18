@@ -199,7 +199,15 @@ func TestRelayServiceFromChatwoot_ContractImageCaptionToCodechat(t *testing.T) {
 
 func TestRelayServiceFromChatwoot_ContractDocumentCaptionToCodechat(t *testing.T) {
 	const mapsURL = "https://maps.app.goo.gl/UYZvebsBMEzk7cqk8"
-	const documentURL = "https://chatwoot.test/rails/active_storage/blobs/redirect/contrato.pdf?disposition=attachment"
+	var availabilityRequests []string
+	documentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		availabilityRequests = append(availabilityRequests, r.Method+" "+r.URL.Path)
+		w.Header().Set("Content-Type", "application/pdf")
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(documentServer.Close)
+
+	documentURL := documentServer.URL + "/rails/active_storage/blobs/redirect/contrato.pdf?disposition=attachment"
 
 	attachmentJSON := fmt.Sprintf(`{
 		"id": 78,
@@ -216,6 +224,9 @@ func TestRelayServiceFromChatwoot_ContractDocumentCaptionToCodechat(t *testing.T
 		t.Fatalf("FromChatwoot returned error: %v", err)
 	}
 
+	if len(availabilityRequests) != 1 || availabilityRequests[0] != "GET /rails/active_storage/blobs/redirect/contrato.pdf" {
+		t.Fatalf("expected one document availability probe, got %#v", availabilityRequests)
+	}
 	req := requireSingleCodechatRequest(t, requests)
 	if req.Path != "/message/sendMedia/test-instance" {
 		t.Fatalf("expected sendMedia URL, got %q", req.Path)
@@ -248,6 +259,49 @@ func TestRelayServiceFromChatwoot_ContractDocumentCaptionToCodechat(t *testing.T
 	wantCaption := "Documento: " + mapsURL
 	if body.MediaMessage.Caption != wantCaption {
 		t.Fatalf("expected normalized caption %q, got %q", wantCaption, body.MediaMessage.Caption)
+	}
+}
+
+func TestRelayServiceFromChatwoot_WaitsAndSendsEachDocumentOnce(t *testing.T) {
+	availabilityRequests := 0
+	documentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		availabilityRequests++
+		if availabilityRequests <= 2 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/pdf")
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(documentServer.Close)
+
+	firstURL := documentServer.URL + "/first.pdf"
+	secondURL := documentServer.URL + "/second.pdf"
+	attachmentsJSON := fmt.Sprintf(`{
+		"id": 79,
+		"message_id": 103,
+		"file_type": "file",
+		"data_url": %q
+	},{
+		"id": 80,
+		"message_id": 103,
+		"file_type": "file",
+		"data_url": %q
+	}`, firstURL, secondURL)
+
+	codechatSvc, requests := newCodechatServiceRecorder(t)
+	relay := newRelayServiceForCodechatTest(codechatSvc)
+	payload := mustDecodeChatwootWebhook(t, chatwootWebhookJSON("", attachmentsJSON))
+
+	if err := relay.FromChatwoot(payload); err != nil {
+		t.Fatalf("FromChatwoot returned error: %v", err)
+	}
+
+	if availabilityRequests != 4 {
+		t.Fatalf("expected three probes for the delayed document and one for the second, got %d", availabilityRequests)
+	}
+	if len(*requests) != 2 {
+		t.Fatalf("expected one CodeChat send per document, got %d", len(*requests))
 	}
 }
 
